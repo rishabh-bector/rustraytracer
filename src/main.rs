@@ -145,7 +145,7 @@ impl RayBehavior for ReflectionBehavior {
     ) -> Option<Vector3<f32>> {
         if ray.bounce > 1 { return None };
         let reflected = Ray{
-            origin: collision.position + collision.normal,
+            origin: collision.position + collision.normal * 100.,
             direction: InnerSpace::normalize(reflect(ray.direction, collision.normal)),
             bounce: ray.bounce + 1,
         };
@@ -217,7 +217,7 @@ impl RayTracer {
             intensity: 2.0,
         };
 
-        let sky = Material::new_sky_material("./cubemaps/space");
+        let sky = Material::new_sky_material("./cubemaps/blue_sunset");
 
         World {entities, sun, sky}
     }
@@ -256,10 +256,10 @@ impl RayTracer {
             };
 
             *p = vec_rgb(self.cast(&ray, &world));
-    
-            if x == 0 && y == 0 {
-                println!("{:?}", ray.direction);
-            }
+
+            // if x == 0 && y == 0 {
+            //     println!("{:?}", ray.direction);
+            // }
         }
 
         match img.save(output) {
@@ -332,6 +332,7 @@ struct World {
 struct Sphere {
     position: Vector3<f32>,
     radius: f32,
+    radius2: f32,
     material: Material,
 }
 
@@ -340,6 +341,7 @@ impl Sphere {
         Sphere {
             position,
             radius,
+            radius2: radius.powi(2),
             material,
         }
     }
@@ -371,13 +373,14 @@ impl Entity for Sphere {
     // }
 
     fn collide(&self, ray: &Ray) -> ColliderResult { 
-        let oc = ray.origin - self.position;
-        let a = InnerSpace::dot(ray.direction, ray.direction);
-        let b = 2.0 * InnerSpace::dot(oc, ray.direction);
-        let c = InnerSpace::dot(oc, oc) - self.radius*self.radius;
-        let discriminant = b*b - 4.0*a*c;
-        if discriminant < 0.0 { return ColliderResult::negative() }
-        let pos = ray.origin + (-b - discriminant.sqrt()) / (2.0*a) * ray.direction;
+        let l = self.position - ray.origin;
+        let tca = l.dot(ray.direction);
+        if tca < 0.0 { return ColliderResult::negative() }
+        let d2 = l.magnitude2() - tca.powi(2);
+        if d2 > self.radius2 { return ColliderResult::negative() }
+        let thc = (self.radius2 - d2).sqrt();
+        let pos = ray.origin + (tca - thc) * ray.direction;
+
         ColliderResult {
             collision: true,
             position: pos,
@@ -408,27 +411,22 @@ impl ColliderResult {
 
 fn main() {
     println!("MAIN!");
-    let raytracer = RayTracer::new_default_renderer((800, 450));
+    let raytracer = RayTracer::new_default_renderer((3840, 2160));
     let mut world = RayTracer::new_empty_world();
 
-    let mat1 = Material::new_lambert_material(color_vec(104, 109, 118), 0.8, 0.0);
-    let mat2 = Material::new_color_material(color_vec(55, 58, 64));
+    let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0);
 
-    let sphere = Sphere::new(Vector3{x: 0.0, y: 0.0, z: 50.0}, 2.0, mat1);
-    let sphere2 = Sphere::new(Vector3{x: 2.0, y: 0.0, z:  -7.0}, 2.0, mat2);
+    let sphere = Sphere::new(Vector3{x: 0.0, y: 0.0, z: 10.0}, 2.0, mat2);
+    //let sphere2 = Sphere::new(Vector3{x: 5.0, y: 0.0, z:  -7.0}, 2.0, mat2);
 
     world.entities.push(Box::new(sphere));
-    // world.entities.push(Box::new(sphere2));
+    //world.entities.push(Box::new(sphere2));
     
     raytracer.render("./bruh.png".to_owned(), world);
 }
 
 fn reflect(d: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
-    Vector3{
-        x: n.y,
-        y: n.y,
-        z: n.y,
-    }
+    d - (n * (n.dot(d)) * 2.0)
 }
 
 fn cubemap(x: f32, y: f32, z: f32) -> (u32, f32, f32) {
