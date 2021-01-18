@@ -44,7 +44,7 @@ impl RayBehavior for LambertBehavior {
     ) -> Option<Vector3<f32>> {
         let mut result = Vector3 {x: 0., y: 0., z: 0.};
         for light_source in world.light_sources.iter() {
-            if light_source.visible(collision.position, collision.normal) {
+            if light_source.visible(collision.position, collision.normal, world) {
                 let LightRay { power, direction } = light_source.illuminate(collision.position, collision.normal);
                 let power = power * (self.albedo / std::f32::consts::PI) * -collision.normal.dot(direction);
                 let power = power.max(0.);
@@ -73,7 +73,7 @@ impl RayBehavior for PhongBehavior {
     ) -> Option<Vector3<f32>> {
         let mut result = Vector3 {x: 0., y: 0., z: 0.};
         for light_source in world.light_sources.iter() {
-            if light_source.visible(collision.position, collision.normal) {
+            if light_source.visible(collision.position, collision.normal, world) {
                 let LightRay { power, direction } = light_source.illuminate(collision.position, collision.normal);
                 let ray_bisector = (-direction - ray.direction).normalize();
                 let power = power * ray_bisector.dot(collision.normal).max(0.).powi(self.alpha);
@@ -333,7 +333,7 @@ struct LightRay {
 
 trait LightSource {
     fn illuminate(&self, pos: Vector3<f32>, normal: Vector3<f32>) -> LightRay;
-    fn visible(&self, pos: Vector3<f32>, normal: Vector3<f32>) -> bool;
+    fn visible(&self, pos: Vector3<f32>, normal: Vector3<f32>, world: &World) -> bool;
     fn color(&self) -> Vector3<f32>;
 }
 
@@ -359,7 +359,7 @@ impl LightSource for DirectionalLight {
         LightRay { power: self.intensity, direction: self.direction }
     }
 
-    fn visible(&self, _pos: Vector3<f32>, normal: Vector3<f32>) -> bool { normal.dot(self.direction) < 0. }
+    fn visible(&self, _pos: Vector3<f32>, normal: Vector3<f32>, world: &World) -> bool { normal.dot(self.direction) < 0. }
 
     fn color(&self) -> Vector3<f32> { self.color }
 }
@@ -368,6 +368,32 @@ struct PointLight {
     position: Vector3<f32>,
     color: Vector3<f32>,
     brightness: f32,
+    attenuation: f32
+}
+
+impl LightSource for PointLight {
+    fn illuminate(&self, pos: Vector3<f32>, _normal: Vector3<f32>) -> LightRay {
+        let direction = pos - self.position;
+        let distance2 = direction.magnitude2();
+        let direction = direction.normalize();
+        LightRay { power: self.brightness / (self.attenuation * distance2), direction }
+    }
+
+    fn visible(&self, pos: Vector3<f32>, _normal: Vector3<f32>, world: &World) -> bool {
+        let direction = self.position - pos;
+        let ray = Ray {
+            origin: pos,
+            direction,
+            bounce: 0
+        };
+        for ent in world.entities.iter() {
+            let result = ent.collide(&ray);
+            if !result.collision { return true }
+        }
+        false
+    }
+
+    fn color(&self) -> Vector3<f32> { self.color }
 }
 
 struct World {
@@ -462,14 +488,23 @@ fn main() {
     let raytracer = RayTracer::new_default_renderer((1920, 1080));
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
-    let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.2, 0.3);
-    let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0, 1.0, 0.0);
+    let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.1, 0.2);
+    let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0, 1.0, 0.2);
 
     let sphere = Sphere::new(Vector3{x: 0.0, y: 0.0, z: 10.0}, 2.0, mat1);
     let sphere2 = Sphere::new(Vector3{x: 2.0, y: 0.0, z:  5.0}, 1.0, mat2);
 
+    let light = PointLight {
+        attenuation: 0.2,
+        color: color_vec(255, 255, 0),
+        brightness: 8.,
+        position: Vector3 {x: 0., y: -3.0, z: 4.0}
+    };
+
     world.entities.push(Box::new(sphere));
     world.entities.push(Box::new(sphere2));
+
+    world.light_sources.push(Box::new(light));
     
     raytracer.render("./bruh.png".to_owned(), world);
 }
