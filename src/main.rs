@@ -22,37 +22,15 @@ trait RayBehavior {
     fn mix(&self) -> f32;
 }
 
-struct ColorBehavior {
-    color: Vector3<f32>,
-    mix: f32,
-}
-
-impl ColorBehavior {
-    fn new(color: Vector3<f32>, mix: f32) -> ColorBehavior {
-        ColorBehavior { color, mix }
-    }
-}
-
-impl RayBehavior for ColorBehavior {
-    fn compute(
-        &self, 
-        _ray: &Ray,
-        _world: &World,
-        _collision: &ColliderResult,
-        _tracer: &RayTracer,
-    ) -> Option<Vector3<f32>> { Some(self.color) }
-
-    fn mix(&self) -> f32 { self.mix }
-}
-
 struct LambertBehavior {
     albedo: f32,
     mix: f32,
+    color: Vector3<f32>
 }
 
 impl LambertBehavior {
-    fn new(albedo: f32, mix: f32) -> LambertBehavior {
-        LambertBehavior { albedo, mix }
+    fn new(albedo: f32, mix: f32, color: Vector3<f32>) -> LambertBehavior {
+        LambertBehavior { albedo, mix, color }
     }
 }
 
@@ -64,10 +42,46 @@ impl RayBehavior for LambertBehavior {
         collision: &ColliderResult,
         _tracer: &RayTracer,
     ) -> Option<Vector3<f32>> {
-        Some(world.sun.diffuse_directional(collision.normal, self.albedo))
+        let mut result = Vector3 {x: 0., y: 0., z: 0.};
+        for light_source in world.light_sources.iter() {
+            if light_source.visible(collision.position, collision.normal) {
+                let LightRay { power, direction } = light_source.illuminate(collision.position, collision.normal);
+                let power = power * (self.albedo / std::f32::consts::PI) * -collision.normal.dot(direction);
+                let power = power.max(0.);
+                result += self.color * power;
+            }
+        }
+        Some( result )
     }
 
     fn mix(&self) -> f32 { self.mix }
+}
+
+struct PhongBehavior {
+    mix: f32,
+    alpha: i32
+}
+
+impl RayBehavior for PhongBehavior {
+    fn mix(&self) -> f32 { self.mix }
+    fn compute (
+        &self, 
+        ray: &Ray,
+        world: &World,
+        collision: &ColliderResult,
+        _tracer: &RayTracer,
+    ) -> Option<Vector3<f32>> {
+        let mut result = Vector3 {x: 0., y: 0., z: 0.};
+        for light_source in world.light_sources.iter() {
+            if light_source.visible(collision.position, collision.normal) {
+                let LightRay { power, direction } = light_source.illuminate(collision.position, collision.normal);
+                let ray_bisector = (-direction - ray.direction).normalize();
+                let power = power * ray_bisector.dot(collision.normal).max(0.).powi(self.alpha);
+                result += light_source.color() * power;
+            }
+        }
+        Some( result )
+    }
 }
 
 struct CubemapBehavior {
@@ -143,9 +157,9 @@ impl RayBehavior for ReflectionBehavior {
         collision: &ColliderResult,
         tracer: &RayTracer,
     ) -> Option<Vector3<f32>> {
-        if ray.bounce > 1 { return None };
+        if ray.bounce > 3 { return None };
         let reflected = Ray{
-            origin: collision.position + collision.normal * 100.,
+            origin: collision.position + collision.normal * 0.3,
             direction: InnerSpace::normalize(reflect(ray.direction, collision.normal)),
             bounce: ray.bounce + 1,
         };
@@ -160,33 +174,28 @@ struct RenderSettings {
 }
 
 struct Material {
-    pub shaders: Vec<Box<dyn RayBehavior>>
+    pub shaders: Vec<Box<dyn RayBehavior>>,
+    pub color: Vector3<f32>
 }
 
 impl Material {
-    fn new_color_material(color: Vector3<f32>) -> Material {
-        let color_behavior = ColorBehavior::new(color, 1.0);
-        let mut shaders: Vec<Box<dyn RayBehavior>> = Vec::new();
-        shaders.push(Box::new(color_behavior));
-        Material { shaders }
-    }
 
-    fn new_lambert_material(color: Vector3<f32>, albedo: f32, mix: f32) -> Material {
-        let color_behavior = ColorBehavior::new(color, 1.0);
-        let lambert_behavior = LambertBehavior::new(albedo, mix);
-        let ref_be = ReflectionBehavior::new(1.0);
+    fn new_lambert_material(color: Vector3<f32>, albedo: f32, lambert: f32, reflective: f32, phong: f32) -> Material {
+        let lambert_behavior = LambertBehavior::new(albedo, lambert, color);
+        let ref_be = ReflectionBehavior::new(reflective);
+        let phong_behavior = PhongBehavior { alpha: 60, mix: phong };
         let mut shaders: Vec<Box<dyn RayBehavior>> = Vec::new();
-        shaders.push(Box::new(color_behavior));
         shaders.push(Box::new(lambert_behavior));
         shaders.push(Box::new(ref_be));
-        Material { shaders }
+        shaders.push(Box::new(phong_behavior));
+        Material { shaders, color }
     }
 
     fn new_sky_material(cubemap_folder: &str) -> Material {
         let cubemap_behavior = CubemapBehavior::new(cubemap_folder, 1.0);
         let mut shaders: Vec<Box<dyn RayBehavior>> = Vec::new();
         shaders.push(Box::new(cubemap_behavior));
-        Material { shaders }
+        Material { shaders, color: color_vec(0, 0, 0) }
     }
 }
 
@@ -209,17 +218,19 @@ impl RayTracer {
         }
     }
 
-    fn new_empty_world() -> World {
+    fn new_empty_world(skybox: &str) -> World {
         let entities: Vec<Box<dyn Entity>> = Vec::new();
-        let sun = DirectionalLight {
-            direction: Vector3{x: 1.0, y: -0.5, z: -1.0},
-            color: color_vec(230, 230, 230),
-            intensity: 2.0,
-        };
+        let sun = DirectionalLight::new(
+            Vector3{x: 1.0, y: -0.5, z: 1.0},
+            color_vec(230, 230, 230),
+            2.0
+        );
 
-        let sky = Material::new_sky_material("./cubemaps/blue_sunset");
+        let light_sources: Vec<Box<dyn LightSource>> = vec![Box::new(sun)];
 
-        World {entities, sun, sky}
+        let sky = Material::new_sky_material(skybox);
+
+        World {entities, light_sources, sky, ambient: 0.15}
     }
 
     fn render(&self, output: String, world: World) {
@@ -271,19 +282,29 @@ impl RayTracer {
         println!("Finished in {}ms", duration.as_millis());
     }
     
-    fn cast(&self, ray: &Ray, world: &World) -> Vector3<f32> {        
+    fn cast(&self, ray: &Ray, world: &World) -> Vector3<f32> {
+        let mut min_distance = f32::MAX;
+        let mut closest_collision = None;
         for entity in world.entities.iter() {
             let ent = entity.as_ref();
             let result = ent.collide(ray);
-            if !result.collision { continue }
+            if result.collision {
+                let collision_dist = (result.position - ray.origin).magnitude2();
+                if collision_dist < min_distance {
+                    min_distance = collision_dist;
+                    closest_collision = Some((result, ent));
+                }
+            }
+        }
+
+        if let Some((result, ent)) = closest_collision {
             let material = ent.material();
 
-            let mut final_color: Vector3<f32> = Vector3{x: -1.0, y: -1.0, z: -1.0};
+            let mut final_color: Vector3<f32> = material.color * world.ambient;
             for behavior in material.shaders.iter() {
                 match behavior.as_ref().compute(ray, world, &result, self) {
                     Some(color) => {
-                        if final_color.x == -1.0 { final_color = color; }
-                        final_color = lerp(final_color, color, behavior.mix());
+                        final_color = final_color + color * behavior.mix();
                     },
                     None => continue
                 }
@@ -305,6 +326,17 @@ struct Camera {
     position: Vector3<f32>,
 }
 
+struct LightRay {
+    power: f32,
+    direction: Vector3<f32>
+}
+
+trait LightSource {
+    fn illuminate(&self, pos: Vector3<f32>, normal: Vector3<f32>) -> LightRay;
+    fn visible(&self, pos: Vector3<f32>, normal: Vector3<f32>) -> bool;
+    fn color(&self) -> Vector3<f32>;
+}
+
 struct DirectionalLight {
     direction: Vector3<f32>,
     color: Vector3<f32>,
@@ -312,21 +344,37 @@ struct DirectionalLight {
 }
 
 impl DirectionalLight {
-    fn diffuse_directional(&self, normal: Vector3<f32>, albedo: f32) -> Vector3<f32> {
-        let light_power = InnerSpace::dot(normal, InnerSpace::normalize(self.direction)) * self.intensity;
-        let light_reflected = albedo / std::f32::consts::PI;
-        Vector3 {
-            x: self.color.x * light_power * light_reflected,
-            y: self.color.y * light_power * light_reflected,
-            z: self.color.z * light_power * light_reflected,
+    fn new(direction: Vector3<f32>, color: Vector3<f32>, intensity: f32) -> Self {
+        let direction = direction.normalize();
+        Self {
+            direction,
+            color,
+            intensity
         }
     }
 }
 
+impl LightSource for DirectionalLight {
+    fn illuminate(&self, _pos: Vector3<f32>, normal: Vector3<f32>) -> LightRay {
+        LightRay { power: self.intensity, direction: self.direction }
+    }
+
+    fn visible(&self, _pos: Vector3<f32>, normal: Vector3<f32>) -> bool { normal.dot(self.direction) < 0. }
+
+    fn color(&self) -> Vector3<f32> { self.color }
+}
+
+struct PointLight {
+    position: Vector3<f32>,
+    color: Vector3<f32>,
+    brightness: f32,
+}
+
 struct World {
     entities: Vec<Box<dyn Entity>>,
-    sun: DirectionalLight,
+    light_sources: Vec<Box<dyn LightSource>>,
     sky: Material,
+    ambient: f32
 }
 
 struct Sphere {
@@ -411,16 +459,17 @@ impl ColliderResult {
 
 fn main() {
     println!("MAIN!");
-    let raytracer = RayTracer::new_default_renderer((3840, 2160));
-    let mut world = RayTracer::new_empty_world();
+    let raytracer = RayTracer::new_default_renderer((1920, 1080));
+    let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
-    let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0);
+    let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.2, 0.3);
+    let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0, 1.0, 0.0);
 
-    let sphere = Sphere::new(Vector3{x: 0.0, y: 0.0, z: 10.0}, 2.0, mat2);
-    //let sphere2 = Sphere::new(Vector3{x: 5.0, y: 0.0, z:  -7.0}, 2.0, mat2);
+    let sphere = Sphere::new(Vector3{x: 0.0, y: 0.0, z: 10.0}, 2.0, mat1);
+    let sphere2 = Sphere::new(Vector3{x: 2.0, y: 0.0, z:  5.0}, 1.0, mat2);
 
     world.entities.push(Box::new(sphere));
-    //world.entities.push(Box::new(sphere2));
+    world.entities.push(Box::new(sphere2));
     
     raytracer.render("./bruh.png".to_owned(), world);
 }
