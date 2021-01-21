@@ -12,7 +12,7 @@ pub mod lighting;
 use common::*; 
 use tracer::*;
 use material::*;
-use geometry::model::Model;
+use geometry::aabb::AABB;
 use geometry::sphere::Sphere;
 
 use anyhow::Result;
@@ -20,17 +20,17 @@ use cgmath::{Vector3};
 
 fn main() -> Result<()> {
     println!("MAIN!");
-    let burger = Model::new(
-        "./obj/mug.obj",
-        Material::new_lambert_material(color_vec(100, 100, 50), 0.8, 0.4, 0.75, 0.01, 20),
-        cgmath::Matrix4::from_translation(Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 30.0,
-        }),
-    );
+    // let burger = Model::new(
+    //     "./obj/mug.obj",
+    //     Material::new_lambert_material(color_vec(100, 100, 50), 0.8, 0.4, 0.75, 0.01, 20),
+    //     cgmath::Matrix4::from_translation(Vector3 {
+    //         x: 0.0,
+    //         y: 0.0,
+    //         z: 30.0,
+    //     }),
+    // );
 
-    let raytracer = RayTracer::new_default_renderer((400, 225));
+    let raytracer = RayTracer::new_default_renderer((1600,800));
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
     let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.1, 0.1, 20);
@@ -54,24 +54,21 @@ fn main() -> Result<()> {
         mat2,
     );
 
-    // let light = PointLight {
-    //     attenuation: 0.2,
-    //     color: color_vec(255, 255, 0),
-    //     brightness: 8.,
-    //     position: Vector3 {x: 0., y: -3.0, z: 4.0}
-    // };
+    let bounded_box = AABB::new(
+        Vector3{x: 0.0, y: 0.0, z: 50.0}, 
+        Vector3{x: 10.0, y: 40.0, z: 20.0}, 
+        Material::new_lambert_material(color_vec(100, 50, 150), 0.5, 0.5, 0.0, 0.5, 1),
+    );
 
     world.entities.push(Box::new(sphere));
     world.entities.push(Box::new(sphere2));
+    world.entities.push(Box::new(bounded_box));
 
     raytracer.render("./bruh.png".to_owned(), world);
     Ok(())
 }
 
 // Todo:
-// - fix normal bug so that reflections work properly
-// - create diffuse behavior & diffuse material (random ray shooting, little to no lambertian)
-// - separate into multiple files
 // - do multiple ray averages per pixel as an option (anti-aliasing)
 // - do more advanced materials, shadows, reflections, refractions
 // - make this a published rust crate with instructions on how to use it
