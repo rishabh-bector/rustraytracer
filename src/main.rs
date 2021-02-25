@@ -12,30 +12,21 @@ pub mod lighting;
 use common::*; 
 use tracer::*;
 use material::*;
-use geometry::aabb::AABB;
-use geometry::sphere::Sphere;
+use geometry::model;
+use geometry::sphere;
 
 use anyhow::Result;
 use cgmath::{Vector3};
 
 fn main() -> Result<()> {
     println!("MAIN!");
-    // let burger = Model::new(
-    //     "./obj/mug.obj",
-    //     Material::new_lambert_material(color_vec(100, 100, 50), 0.8, 0.4, 0.75, 0.01, 20),
-    //     cgmath::Matrix4::from_translation(Vector3 {
-    //         x: 0.0,
-    //         y: 0.0,
-    //         z: 30.0,
-    //     }),
-    // );
 
-    let raytracer = RayTracer::new_default_renderer((1600,800));
+    let raytracer = RayTracer::new_default_renderer((160, 90));
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
-    let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.1, 0.1, 20);
+    let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.01, 0.1, 20);
     let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0, 1.0, 0.1, 20);
-    let sphere = Sphere::new(
+    let sphere = sphere::Sphere::new(
         Vector3 {
             x: -3.0,
             y: 0.0,
@@ -44,7 +35,7 @@ fn main() -> Result<()> {
         1.0,
         mat1,
     );
-    let sphere2 = Sphere::new(
+    let sphere2 = sphere::Sphere::new(
         Vector3 {
             x: 2.0,
             y: 0.0,
@@ -54,15 +45,30 @@ fn main() -> Result<()> {
         mat2,
     );
 
-    let bounded_box = AABB::new(
-        Vector3{x: 0.0, y: 0.0, z: 50.0}, 
-        Vector3{x: 10.0, y: 40.0, z: 20.0}, 
-        Material::new_lambert_material(color_vec(100, 50, 150), 0.5, 0.5, 0.0, 0.5, 1),
+
+    // let bounded_box = AABB::new(
+    //     Vector3{x: 1.0, y: 1.0, z: 3.0}, 
+    //     Vector3{x: 1.25, y: 1.25, z: 3.25}, 
+    //     Material::new_lambert_material(color_vec(100, 100, 20), 0.5, 0.5, 0.0, 0.5, 1),
+    // );
+
+    let translate_mat = cgmath::Matrix4::from_translation(Vector3 {
+        x: 0.0,
+        y: 30.0,
+        z: 70.0,
+    });
+    
+    let scale_mat = cgmath::Matrix4::from_nonuniform_scale(1.0, -1.0, 1.0);
+
+    let mut burger = model::Model::new(
+        "./obj/ufo_fix.obj",
+        Material::new_lambert_material(color_vec(100, 100, 50), 1.0, 1.0, 0.0, 0.1, 20),
+        translate_mat * scale_mat,
     );
 
-    world.entities.push(Box::new(sphere));
-    world.entities.push(Box::new(sphere2));
-    world.entities.push(Box::new(bounded_box));
+    //world.entities.push(Box::new(sphere));
+    //world.entities.push(Box::new(sphere2));
+    world.entities.push(Box::new(burger));
 
     raytracer.render("./bruh.png".to_owned(), world);
     Ok(())

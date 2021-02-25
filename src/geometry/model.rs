@@ -1,13 +1,14 @@
 extern crate cgmath;
 
 use crate::material::Material;
-use crate::common::{Entity, ColliderResult, Ray};
+use crate::common::{Entity, ColliderResult, Ray, vec2point};
 use crate::geometry::triangle::Triangle;
 
 use cgmath::{Vector3, InnerSpace};
 use obj::{load_obj, Obj}; 
 use std::fs::File;
 use std::io::BufReader;
+use crate::cgmath::Transform;
 
 pub struct Model {
     material: Material,
@@ -29,12 +30,22 @@ impl Model {
             let n0 = vertex2normal(model.vertices[model.indices[i] as usize]);
             let n1 = vertex2normal(model.vertices[model.indices[i+1] as usize]);
             let n2 = vertex2normal(model.vertices[model.indices[i+2] as usize]);
-            triangles.push(Triangle::new(v0, v1, v2, (n0+n1+n2).normalize()));
+            triangles.push(Triangle::new(
+                transform.transform_point(vec2point(v0)), 
+                transform.transform_point(vec2point(v1)), 
+                transform.transform_point(vec2point(v2)), 
+            (n0+n1+n2).normalize()));
         }
         println!("Model has {} triangles.", triangles.len());
         Model {
             material,
             triangles,
+        }
+    }
+
+    pub fn compute_normals(&mut self) {
+        for t in &mut self.triangles {
+            t.compute_normal();
         }
     }
 }
@@ -63,7 +74,7 @@ fn vertex2vec(v: obj::Vertex) -> Vector3<f32> {
     Vector3 {
         x: v.position[0],
         y: v.position[1],
-        z: v.position[2]+20.0,
+        z: v.position[2],
     }
 }
 

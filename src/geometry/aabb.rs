@@ -61,30 +61,38 @@ impl Entity for AABB {
         if (tmin > tzmax) || (tzmin > tmax) {
             return ColliderResult::negative(); 
  }
-        if (tzmin > tmin) {
+        if tzmin > tmin {
             tmin = tzmin; 
         }
     
-        if (tzmax < tmax) {
+        if tzmax < tmax {
             tmax = tzmax; 
         }
 
+        if tmin > tmax {
+            tmin = tmax;
+        }
+
         let position = ray.parameterize(tmin);
-        let delta = 0.01;
+        let delta = 0.001;
         let check = |a: f32, b: f32, delta: f32| -> bool {a >= b-delta && a <= b+delta};
-        let mut normal = Vector3{x: 0.0, y: 0.0, z: 0.0};
+        let mut normal = Vector3{x: 0.001, y: 0.0, z: 0.0};
         if check(position.x, self.min.x, delta) {
-            normal.x = 1.0;
-        } else if check(position.x, self.max.x, delta) {
             normal.x = -1.0;
+        } else if check(position.x, self.max.x, delta) {
+            normal.x = 1.0;
         } else if check(position.y, self.min.y, delta) {
-            normal.y = 1.0;
-        } else if check(position.y, self.max.x, delta) {
+            println!("RAY-BOX MIN: {:?} {:?} {:?}", position, self.min, self.max);
             normal.y = -1.0;
+        } else if check(position.y, self.max.y, delta) {
+            println!("RAY-BOX MAX: {:?} {:?} {:?}", position, self.min, self.max);
+            normal.y = 1.0;
         } else if check(position.z, self.min.z, delta) {
-            normal.z = 1.0;
-        } else if check(position.z, self.max.x, delta) {
             normal.z = -1.0;
+        } else if check(position.z, self.max.z, delta) {
+            normal.z = 1.0;
+        } else {
+            println!("Normal calc failed! {:?}", position);
         }
  
         ColliderResult{

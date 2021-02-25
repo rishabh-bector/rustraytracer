@@ -27,7 +27,7 @@ impl RayTracer {
         RayTracer {
             settings: RenderSettings { image_size: size },
             camera: Camera {
-                size: (size.0 as f32 / 10.0, size.1 as f32 / 10.0),
+                size: (160.0, 90.0),
                 lense_factor: (1.0 as f32, 1.0 as f32),
                 position: Vector3 {
                     x: 0 as f32,
@@ -43,7 +43,7 @@ impl RayTracer {
         let sun = DirectionalLight::new(
             Vector3 {
                 x: 1.0,
-                y: -0.5,
+                y: 1.0,
                 z: 1.0,
             },
             color_vec(230, 230, 230),
@@ -113,6 +113,11 @@ impl RayTracer {
             y: lense_size.1,
             z: 0.0,
         };
+        
+        let num_pixels = img.enumerate_pixels().len() as i32;
+        let tenth = num_pixels / 10;
+        let mut i = 0;
+
         for (x, y, p) in img.enumerate_pixels_mut() {
             let camera_point = camera_ll
                 + (x as f32 / self.settings.image_size.0 as f32) * camera_h
@@ -138,6 +143,11 @@ impl RayTracer {
             // if x == 0 && y == 0 {
             //     println!("{:?}", ray.direction);
             // }
+
+            if i % tenth == 0 {
+                println!("Progress: {}%", (i as f32) / (num_pixels as f32) * 100.0);
+            }
+            i += 1;
         }
 
         match img.save(output) {

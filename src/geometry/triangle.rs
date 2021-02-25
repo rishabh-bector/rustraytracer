@@ -2,18 +2,19 @@ extern crate cgmath;
 
 use crate::material::Material;
 use crate::common::{Entity, ColliderResult, Ray};
+use crate::common;
 
-use cgmath::{Vector3, InnerSpace};
+use cgmath::{Vector3, InnerSpace, Point3};
 
 pub struct Triangle {
-    v0: Vector3<f32>,
-    v1: Vector3<f32>,
-    v2: Vector3<f32>,
+    v0: Point3<f32>,
+    v1: Point3<f32>,
+    v2: Point3<f32>,
     normal: Vector3<f32>,
 }
 
 impl Triangle {
-    pub fn new(v0: Vector3<f32>, v1: Vector3<f32>, v2: Vector3<f32>, normal: Vector3<f32>) -> Triangle {
+    pub fn new(v0: Point3<f32>, v1: Point3<f32>, v2: Point3<f32>, normal: Vector3<f32>) -> Triangle {
         Triangle { v0, v1, v2, normal }
     } 
 
@@ -26,53 +27,37 @@ impl Triangle {
 
 impl Entity for Triangle {
     fn collide(&self, ray: &Ray) -> ColliderResult {
-        let culling = false;
-        let kEpsilon = 0.01;
 
-        let v0v1 = self.v1 - self.v0;
-        let v0v2 = self.v2 - self.v0;
-        let area2 = self.normal.magnitude2();
+        // Möller–Trumbore intersection algorithm
 
-        let NdotRayDirection = self.normal.dot(ray.direction);
-        if NdotRayDirection.abs() < kEpsilon {
+        const EPSILON: f32 = 0.0000001;
+        let edge1 = self.v1 - self.v0;
+        let edge2 = self.v2 - self.v0;
+        let h = ray.direction.cross(edge2);
+        let a = edge1.dot(h);
+        if a > -EPSILON && a < EPSILON {
             return ColliderResult::negative();
         }
-
-        let d = self.normal.dot(self.v0);
-        let t = (self.normal.dot(ray.origin) + d) / NdotRayDirection;
-        if t < 0.0 {
+        let f = 1.0/a;
+        let s = common::vec2point(ray.origin) - self.v0;
+        let u = f * s.dot(h);
+        if u < 0.0 || u > 1.0 {
             return ColliderResult::negative();
         }
-
-        let P = ray.origin + t * ray.direction;
-        let mut C: Vector3<f32>;
-
-        let edge0 = self.v1 - self.v0;
-        let vp0 = P - self.v0;
-        C = edge0.cross(vp0);
-        if self.normal.dot(C) < 0.0 {
+        let q = s.cross(edge1);
+        let v = f * ray.direction.dot(q);
+        if v < 0.0 || u + v > 1.0 {
             return ColliderResult::negative();
         }
-
-        let edge1 = self.v2 - self.v1;
-        let vp1 = P - self.v1;
-        C = edge1.cross(vp1);
-        if self.normal.dot(C) < 0.0 {
-            return ColliderResult::negative();
+        let t = f * edge2.dot(q);
+        if t > EPSILON {
+            return ColliderResult{
+                collision: true,
+                position: ray.origin + ray.direction * t,
+                normal: self.normal,
+            }
         }
-
-        let edge2 = self.v0 - self.v2;
-        let vp2 = P - self.v2;
-        C = edge2.cross(vp2);
-        if self.normal.dot(C) < 0.0 {
-            return ColliderResult::negative();
-        }
-
-        ColliderResult {
-            collision: true,
-            position: ray.parameterize(t),
-            normal: self.normal,
-        }
+        return ColliderResult::negative();
     }
 
     fn material(&self) -> Option<&Material> {

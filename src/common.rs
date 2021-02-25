@@ -4,7 +4,7 @@ use crate::material::Material;
 use crate::tracer::RayTracer;
 use crate::lighting::LightSource;
 
-use cgmath::Vector3;
+use cgmath::{Vector3, Point3};
 
 pub struct World {
     pub entities: Vec<Box<dyn Entity>>,
@@ -96,4 +96,12 @@ pub fn lerp(v1: Vector3<f32>, v2: Vector3<f32>, amount: f32) -> Vector3<f32> {
 
 pub fn vector3(x: f32, y: f32, z: f32) -> Vector3<f32> {
     Vector3{x, y, z}
+}
+
+pub fn vec2point(v: Vector3<f32>) -> Point3<f32> {
+    Point3{
+        x: v.x,
+        y: v.y,
+        z: v.z,
+    }
 }
