@@ -4,7 +4,7 @@ use crate::common::*;
 use crate::material::*;
 use crate::lighting::*;
 
-use cgmath::{Vector3, InnerSpace};
+use cgmath::{Vector3, Point3, InnerSpace};
 use std::time;
 
 pub struct RayTracer {
@@ -18,8 +18,8 @@ pub struct RenderSettings {
 
 pub struct Camera {
     size: (f32, f32),
-    lense_factor: (f32, f32),
-    position: Vector3<f32>,
+    lens_factor: (f32, f32),
+    position: Point3<f32>,
 }
 
 impl RayTracer {
@@ -28,11 +28,11 @@ impl RayTracer {
             settings: RenderSettings { image_size: size },
             camera: Camera {
                 size: (160.0, 90.0),
-                lense_factor: (1.0 as f32, 1.0 as f32),
-                position: Vector3 {
-                    x: 0 as f32,
-                    y: 0 as f32,
-                    z: 0 as f32,
+                lens_factor: (1., 1.),
+                position: Point3 {
+                    x: 0.,
+                    y: 0.,
+                    z: 0.,
                 },
             },
         }
@@ -43,7 +43,7 @@ impl RayTracer {
         let sun = DirectionalLight::new(
             Vector3 {
                 x: 1.0,
-                y: 1.0,
+                y: -1.0,
                 z: 1.0,
             },
             color_vec(230, 230, 230),
@@ -76,26 +76,9 @@ impl RayTracer {
                 z: 75.0,
             };
         let lense_size = (
-            self.camera.size.0 * self.camera.lense_factor.0,
-            self.camera.size.1 * self.camera.lense_factor.1,
+            self.camera.size.0 * self.camera.lens_factor.0,
+            self.camera.size.1 * self.camera.lens_factor.1,
         );
-
-        let camera_ll = self.camera.position
-            - Vector3 {
-                x: self.camera.size.0 / 2.0,
-                y: self.camera.size.1 / 2.0,
-                z: 0.0,
-            };
-        let camera_h = Vector3 {
-            x: self.camera.size.0,
-            y: 0.0,
-            z: 0.0,
-        };
-        let camera_v = Vector3 {
-            x: 0.0,
-            y: self.camera.size.1,
-            z: 0.0,
-        };
 
         let lense_ll = lense_pos
             - Vector3 {
@@ -119,9 +102,6 @@ impl RayTracer {
         let mut i = 0;
 
         for (x, y, p) in img.enumerate_pixels_mut() {
-            let camera_point = camera_ll
-                + (x as f32 / self.settings.image_size.0 as f32) * camera_h
-                + (y as f32 / self.settings.image_size.1 as f32) * camera_v;
             let camera_point = self.camera.position;
 
             let lense_point = lense_ll

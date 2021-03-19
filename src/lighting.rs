@@ -2,7 +2,7 @@ extern crate cgmath;
 
 use crate::common::*;
 
-use cgmath::{Vector3, InnerSpace};
+use cgmath::{InnerSpace, Point3, Vector3};
 
 pub struct LightRay {
     pub power: f32,
@@ -10,8 +10,8 @@ pub struct LightRay {
 }
 
 pub trait LightSource {
-    fn illuminate(&self, pos: Vector3<f32>, normal: Vector3<f32>) -> LightRay;
-    fn visible(&self, pos: Vector3<f32>, normal: Vector3<f32>, world: &World) -> bool;
+    fn illuminate(&self, pos: Point3<f32>, normal: Vector3<f32>) -> LightRay;
+    fn visible(&self, pos: Point3<f32>, normal: Vector3<f32>, world: &World) -> bool;
     fn color(&self) -> Vector3<f32>;
 }
 
@@ -33,14 +33,14 @@ impl DirectionalLight {
 }
 
 impl LightSource for DirectionalLight {
-    fn illuminate(&self, _pos: Vector3<f32>, normal: Vector3<f32>) -> LightRay {
+    fn illuminate(&self, _pos: Point3<f32>, normal: Vector3<f32>) -> LightRay {
         LightRay {
             power: self.intensity,
             direction: self.direction,
         }
     }
 
-    fn visible(&self, _pos: Vector3<f32>, normal: Vector3<f32>, world: &World) -> bool {
+    fn visible(&self, _pos: Point3<f32>, normal: Vector3<f32>, world: &World) -> bool {
         normal.dot(self.direction) < 0.
     }
 
@@ -50,14 +50,14 @@ impl LightSource for DirectionalLight {
 }
 
 pub struct PointLight {
-    position: Vector3<f32>,
+    position: Point3<f32>,
     color: Vector3<f32>,
     brightness: f32,
     attenuation: f32,
 }
 
 impl LightSource for PointLight {
-    fn illuminate(&self, pos: Vector3<f32>, _normal: Vector3<f32>) -> LightRay {
+    fn illuminate(&self, pos: Point3<f32>, _normal: Vector3<f32>) -> LightRay {
         let direction = pos - self.position;
         let distance2 = direction.magnitude2();
         let direction = direction.normalize();
@@ -67,7 +67,7 @@ impl LightSource for PointLight {
         }
     }
 
-    fn visible(&self, pos: Vector3<f32>, _normal: Vector3<f32>, world: &World) -> bool {
+    fn visible(&self, pos: Point3<f32>, _normal: Vector3<f32>, world: &World) -> bool {
         let direction = self.position - pos;
         let ray = Ray {
             origin: pos,

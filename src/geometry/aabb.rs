@@ -3,106 +3,116 @@ extern crate cgmath;
 use crate::material::Material;
 use crate::common::{Entity, ColliderResult, Ray};
 
-use cgmath::{Vector3, InnerSpace};
+use cgmath::{Vector3, Point3, EuclideanSpace};
 
 pub struct AABB {
-    min: Vector3<f32>,
-    max: Vector3<f32>,
-    material: Material,
+    pub min: Point3<f32>,
+    pub max: Point3<f32>
 }
 
 impl AABB {
-    pub fn new(min: Vector3<f32>, max: Vector3<f32>, material: Material) -> AABB {
-        AABB {
-            min, max, material,
+    pub fn new(min: Point3<f32>, max: Point3<f32>) -> AABB {
+        AABB { min, max }
+    }
+
+    pub fn from_entities<T: Entity> (entities: &Vec<T>) -> Self {
+        let mut min = Point3{x: std::f32::MAX, y: std::f32::MAX, z: std::f32::MAX};
+        let mut max = Point3{x: std::f32::MIN, y: std::f32::MIN, z: std::f32::MIN};
+        for entity in entities {
+            let bb = entity.bounding_box();
+            if bb.min.x < min.x { min.x = bb.min.x; }
+            if bb.min.y < min.y { min.y = bb.min.y; }
+            if bb.min.z < min.z { min.z = bb.min.z; }
+
+            if bb.max.x > max.x { max.x = bb.max.x; }
+            if bb.max.y > max.y { max.y = bb.max.y; }
+            if bb.max.z > max.z { max.z = bb.max.z; }
         }
+        AABB { min, max }
+    }
+
+    pub fn contains (&self, point: &Point3<f32>) -> bool {
+        if point.x > self.max.x || point.x < self.min.x { return false; }
+        if point.y > self.max.y || point.y < self.min.y { return false; }
+        if point.z > self.max.z || point.z < self.min.z { return false; }
+        true
     }
 }
 
 impl Entity for AABB {
     fn collide(&self, ray: &Ray) -> ColliderResult {
-        let mut tmin = (self.min.x - ray.origin.x) / ray.direction.x; 
-        let mut tmax = (self.max.x - ray.origin.x) / ray.direction.x; 
-        if tmin > tmax {
-            let t = tmin;
-            tmin = tmax;
-            tmax = t;
-        } 
-        let mut tymin = (self.min.y - ray.origin.y) / ray.direction.y; 
-        let mut tymax = (self.max.y - ray.origin.y) / ray.direction.y; 
+
+        let mut candidate_dist = [0., 0., 0.];
+        let hit_point;
+        let inside = self.contains(&ray.origin);
  
-        if tymin > tymax {
-            let t = tymin;
-            tymin = tymax;
-            tymax = t;
+        for i in 0..3 {
+            if ray.origin[i] < self.min[i] {
+                candidate_dist[i] = self.min[i] - ray.origin[i];
+                if ray.direction[i] < 0. { return ColliderResult::negative(); }
+            } else if ray.origin[i] > self.max[i] {
+                candidate_dist[i] = self.max[i] - ray.origin[i];
+                if ray.direction[i] > 0. { return ColliderResult::negative(); }
+            } else {
+                if inside {
+                    if ray.direction[i] > 0. {
+                        candidate_dist[i] = self.max[i] - ray.origin[i];
+                    } else {
+                        candidate_dist[i] = self.min[i] - ray.origin[i];
+                    }
+                } else {
+                    candidate_dist[i] = -ray.direction[i];
+                }
+            }
         }
 
-        if (tmin > tymax) || (tymin > tmax) {
-            return ColliderResult::negative();
-        }
- 
-        if tymin > tmin {
-            tmin = tymin; 
-        }
-        
-        if tymax < tmax {
-            tmax = tymax;
-        } 
+        let one_over_dir = 1. / ray.direction;
 
-        let mut tzmin = (self.min.z - ray.origin.z) / ray.direction.z; 
-        let mut tzmax = (self.max.z - ray.origin.z) / ray.direction.z; 
- 
-        if tzmin > tzmax {
-            let t = tzmin;
-            tzmin = tzmax;
-            tzmax = t;
-        }
-
-        if (tmin > tzmax) || (tzmin > tmax) {
-            return ColliderResult::negative(); 
- }
-        if tzmin > tmin {
-            tmin = tzmin; 
-        }
-    
-        if tzmax < tmax {
-            tmax = tzmax; 
-        }
-
-        if tmin > tmax {
-            tmin = tmax;
-        }
-
-        let position = ray.parameterize(tmin);
-        let delta = 0.001;
-        let check = |a: f32, b: f32, delta: f32| -> bool {a >= b-delta && a <= b+delta};
-        let mut normal = Vector3{x: 0.001, y: 0.0, z: 0.0};
-        if check(position.x, self.min.x, delta) {
-            normal.x = -1.0;
-        } else if check(position.x, self.max.x, delta) {
-            normal.x = 1.0;
-        } else if check(position.y, self.min.y, delta) {
-            println!("RAY-BOX MIN: {:?} {:?} {:?}", position, self.min, self.max);
-            normal.y = -1.0;
-        } else if check(position.y, self.max.y, delta) {
-            println!("RAY-BOX MAX: {:?} {:?} {:?}", position, self.min, self.max);
-            normal.y = 1.0;
-        } else if check(position.z, self.min.z, delta) {
-            normal.z = -1.0;
-        } else if check(position.z, self.max.z, delta) {
-            normal.z = 1.0;
+        let times = (0..3).map(|i| 
+                if !one_over_dir[i].is_finite() {
+                    if candidate_dist[i] == 0. {-1.}
+                    else {std::f32::MAX}
+                } else { candidate_dist[i] * one_over_dir[i] });
+        if inside {
+            hit_point = ray.parameterize(
+                times.min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap()
+            );
         } else {
-            println!("Normal calc failed! {:?}", position);
+            hit_point = ray.parameterize(
+                times.max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap()
+            );
+            if !self.contains(&Point3::from_vec(hit_point + Vector3 {x: 0.001, y: 0.001, z: 0.001})) {
+                return ColliderResult::negative();
+            }
         }
- 
-        ColliderResult{
-            collision: true, 
-            normal,
-            position,
+
+        ColliderResult {
+            normal: Vector3 {x: 0., y: 0., z: 0.},
+            collision: true,
+            position: Point3::from_vec(hit_point)
         }
     }
 
-    fn material(&self) -> Option<&Material> {
-        Some(&self.material)
+    fn bounding_box(&self) -> AABB {
+        return AABB {
+            min: self.min,
+            max: self.max
+        }
+    }
+
+    fn material(&self) -> Option<&Material> { None }
+    
+    fn position(&self) -> Point3<f32> {
+        let pos = self.min + (self.max - self.min) / 2.;
+        Point3 {x: pos.x, y: pos.y, z: pos.z}
+    }
+}
+
+impl Clone for AABB {
+    fn clone(&self) -> Self {
+        AABB {
+            max: self.max.clone(),
+            min: self.min.clone()
+        }
     }
 }

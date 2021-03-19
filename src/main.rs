@@ -16,18 +16,18 @@ use geometry::model;
 use geometry::sphere;
 
 use anyhow::Result;
-use cgmath::{Vector3};
+use cgmath::{Vector3, Point3};
 
 fn main() -> Result<()> {
     println!("MAIN!");
 
-    let raytracer = RayTracer::new_default_renderer((160, 90));
+    let raytracer = RayTracer::new_default_renderer((1600, 900));
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
     let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.01, 0.1, 20);
     let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0, 1.0, 0.1, 20);
     let sphere = sphere::Sphere::new(
-        Vector3 {
+        Point3 {
             x: -3.0,
             y: 0.0,
             z: 5.0,
@@ -36,7 +36,7 @@ fn main() -> Result<()> {
         mat1,
     );
     let sphere2 = sphere::Sphere::new(
-        Vector3 {
+        Point3 {
             x: 2.0,
             y: 0.0,
             z: 8.0,
@@ -52,22 +52,15 @@ fn main() -> Result<()> {
     //     Material::new_lambert_material(color_vec(100, 100, 20), 0.5, 0.5, 0.0, 0.5, 1),
     // );
 
-    let translate_mat = cgmath::Matrix4::from_translation(Vector3 {
-        x: 0.0,
-        y: 30.0,
-        z: 70.0,
-    });
-    
-    let scale_mat = cgmath::Matrix4::from_nonuniform_scale(1.0, -1.0, 1.0);
-
-    let mut burger = model::Model::new(
+    let burger = model::Model::new(
         "./obj/ufo_fix.obj",
         Material::new_lambert_material(color_vec(100, 100, 50), 1.0, 1.0, 0.0, 0.1, 20),
-        translate_mat * scale_mat,
+        Point3 {x: 0.0, y: 30.0, z: 70.0},
+        Vector3 {x: 1.0, y: -1.0, z: 1.0}
     );
 
-    //world.entities.push(Box::new(sphere));
-    //world.entities.push(Box::new(sphere2));
+    world.entities.push(Box::new(sphere));
+    world.entities.push(Box::new(sphere2));
     world.entities.push(Box::new(burger));
 
     raytracer.render("./bruh.png".to_owned(), world);
