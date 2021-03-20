@@ -4,7 +4,7 @@ use crate::material::Material;
 use crate::geometry::aabb::AABB;
 use crate::common::{Entity, ColliderResult, Ray};
 
-use cgmath::{InnerSpace, Point3};
+use cgmath::{InnerSpace, Point3, Vector3};
 
 pub struct Sphere {
     position: Point3<f32>,
@@ -40,6 +40,7 @@ impl Entity for Sphere {
 
         ColliderResult {
             collision: true,
+            material: Some(self.material.clone()),
             position: pos,
             normal: InnerSpace::normalize(pos - self.position),
         }
@@ -62,5 +63,9 @@ impl Entity for Sphere {
             y: self.position.y,
             z: self.position.z
         }
+    }
+
+    fn translate(&mut self, vec: Vector3<f32>) {
+        self.position += vec;
     }
 }

@@ -150,14 +150,13 @@ impl RayTracer {
                 let collision_dist = (result.position - ray.origin).magnitude2();
                 if collision_dist < min_distance {
                     min_distance = collision_dist;
-                    closest_collision = Some((result, ent));
+                    closest_collision = Some(result);
                 }
             }
         }
 
-        if let Some((result, ent)) = closest_collision {
-            let material = ent.material().unwrap();
-
+        if let Some(result) = closest_collision {
+            let material = result.material.as_ref().unwrap();
             let mut final_color: Vector3<f32> = material.color * world.ambient;
             for behavior in material.shaders.iter() {
                 match behavior.as_ref().compute(ray, world, &result, self) {

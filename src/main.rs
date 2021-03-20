@@ -12,7 +12,7 @@ pub mod lighting;
 use common::*; 
 use tracer::*;
 use material::*;
-use geometry::model;
+use geometry::{model::{self, Model, Scene}, sphere::Sphere};
 use geometry::sphere;
 
 use anyhow::Result;
@@ -26,7 +26,7 @@ fn main() -> Result<()> {
 
     let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.01, 0.1, 20);
     let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0, 1.0, 0.1, 20);
-    let sphere = sphere::Sphere::new(
+    let sphere = Box::new(Sphere::new(
         Point3 {
             x: -3.0,
             y: 0.0,
@@ -34,8 +34,8 @@ fn main() -> Result<()> {
         },
         1.0,
         mat1,
-    );
-    let sphere2 = sphere::Sphere::new(
+    ));
+    let sphere2 = Box::new(Sphere::new(
         Point3 {
             x: 2.0,
             y: 0.0,
@@ -43,7 +43,7 @@ fn main() -> Result<()> {
         },
         1.0,
         mat2,
-    );
+    ));
 
 
     // let bounded_box = AABB::new(
@@ -52,16 +52,20 @@ fn main() -> Result<()> {
     //     Material::new_lambert_material(color_vec(100, 100, 20), 0.5, 0.5, 0.0, 0.5, 1),
     // );
 
-    let burger = model::Model::new(
+    let burger = Box::new(Model::new(
         "./obj/ufo_fix.obj",
         Material::new_lambert_material(color_vec(100, 100, 50), 1.0, 1.0, 0.0, 0.1, 20),
         Point3 {x: 0.0, y: 30.0, z: 70.0},
         Vector3 {x: 1.0, y: -1.0, z: 1.0}
-    );
+    ));
 
-    world.entities.push(Box::new(sphere));
-    world.entities.push(Box::new(sphere2));
-    world.entities.push(Box::new(burger));
+    let models: Vec<Box<dyn Entity>> = vec![burger, sphere, sphere2];
+
+    // Not faster with 3 objects
+    // let scene = Box::new(Scene::new(models, Point3 {x: 0., y: 0., z: 0.}));
+    // world.entities.push(scene);
+
+    world.entities = models;
 
     raytracer.render("./bruh.png".to_owned(), world);
     Ok(())

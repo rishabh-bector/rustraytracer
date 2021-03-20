@@ -5,7 +5,7 @@ use crate::tracer::RayTracer;
 use crate::lighting::LightSource;
 use crate::geometry::aabb::AABB;
 
-use cgmath::{Vector3, Point3, EuclideanSpace};
+use cgmath::{EuclideanSpace, Point3, Vector3};
 
 pub struct World {
     pub entities: Vec<Box<dyn Entity>>,
@@ -43,18 +43,21 @@ pub trait Entity {
     fn material(&self) -> Option<&Material>;
     fn bounding_box(&self) -> AABB;
     fn position(&self) -> Point3<f32>;
+    fn translate(&mut self, vec: Vector3<f32>);
 }
 
 pub struct ColliderResult {
     pub collision: bool,
     pub position: Point3<f32>,
     pub normal: Vector3<f32>,
+    pub material: Option<Material>
 }
 
 impl ColliderResult {
     pub fn negative() -> ColliderResult {
         ColliderResult {
             collision: false,
+            material: None,
             position: Point3 {
                 x: 0.0,
                 y: 0.0,

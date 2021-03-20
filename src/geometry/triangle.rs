@@ -6,33 +6,18 @@ use crate::geometry::aabb::AABB;
 
 use cgmath::{Vector3, InnerSpace, Point3};
 
+#[derive(Clone)]
 pub struct Triangle {
     pub v0: Point3<f32>,
     pub v1: Point3<f32>,
     pub v2: Point3<f32>,
     pub normal: Vector3<f32>,
-}
-
-impl Clone for Triangle {
-    fn clone(&self) -> Triangle {
-        Triangle {
-            v0: self.v0.clone(),
-            v1: self.v1.clone(),
-            v2: self.v2.clone(),
-            normal: self.normal.clone()
-        }
-    }
+    material: Material
 }
 
 impl Triangle {
-    pub fn new(v0: Point3<f32>, v1: Point3<f32>, v2: Point3<f32>, normal: Vector3<f32>) -> Triangle {
-        Triangle { v0, v1, v2, normal }
-    } 
-
-    pub fn compute_normal(&mut self) {
-        let v0v1 = self.v1 - self.v0;
-        let v0v2 = self.v2 - self.v0;
-        self.normal = v0v1.cross(v0v2).normalize();
+    pub fn new(v0: Point3<f32>, v1: Point3<f32>, v2: Point3<f32>, normal: Vector3<f32>, material: Material) -> Triangle {
+        Triangle { v0, v1, v2, normal, material }
     }
 }
 
@@ -64,6 +49,7 @@ impl Entity for Triangle {
         if t > EPSILON {
             return ColliderResult{
                 collision: true,
+                material: Some(self.material.clone()),
                 position: ray.origin + ray.direction * t,
                 normal: self.normal,
             }
@@ -88,5 +74,11 @@ impl Entity for Triangle {
 
     fn material(&self) -> Option<&Material> {
         None
+    }
+
+    fn translate(&mut self, vec: Vector3<f32>) {
+        self.v0 += vec;
+        self.v1 += vec;
+        self.v2 += vec;
     }
 }

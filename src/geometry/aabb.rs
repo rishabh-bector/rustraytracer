@@ -1,9 +1,11 @@
 extern crate cgmath;
 
+use std::{cell::RefCell, ops::Deref, rc::Rc};
+
 use crate::material::Material;
 use crate::common::{Entity, ColliderResult, Ray};
 
-use cgmath::{Vector3, Point3, EuclideanSpace};
+use cgmath::{EuclideanSpace, Point3, Vector3};
 
 pub struct AABB {
     pub min: Point3<f32>,
@@ -15,11 +17,31 @@ impl AABB {
         AABB { min, max }
     }
 
-    pub fn from_entities<T: Entity> (entities: &Vec<T>) -> Self {
+    pub fn default() -> Self {
+        AABB::new(Point3 {x: 0., y: 0., z: 0.}, Point3 {x: 0., y: 0., z: 0.})
+    }
+
+    pub fn from_entities<T: Entity + ?Sized> (entities: impl Iterator<Item = impl Deref<Target = T>>) -> Self {
         let mut min = Point3{x: std::f32::MAX, y: std::f32::MAX, z: std::f32::MAX};
         let mut max = Point3{x: std::f32::MIN, y: std::f32::MIN, z: std::f32::MIN};
         for entity in entities {
             let bb = entity.bounding_box();
+            if bb.min.x < min.x { min.x = bb.min.x; }
+            if bb.min.y < min.y { min.y = bb.min.y; }
+            if bb.min.z < min.z { min.z = bb.min.z; }
+
+            if bb.max.x > max.x { max.x = bb.max.x; }
+            if bb.max.y > max.y { max.y = bb.max.y; }
+            if bb.max.z > max.z { max.z = bb.max.z; }
+        }
+        AABB { min, max }
+    }
+
+    pub fn from_dyn_entities <T: Entity + ?Sized> (entities: &Vec<Rc<RefCell<Box<T>>>>) -> Self {
+        let mut min = Point3{x: std::f32::MAX, y: std::f32::MAX, z: std::f32::MAX};
+        let mut max = Point3{x: std::f32::MIN, y: std::f32::MIN, z: std::f32::MIN};
+        for entity in entities {
+            let bb = entity.borrow().bounding_box();
             if bb.min.x < min.x { min.x = bb.min.x; }
             if bb.min.y < min.y { min.y = bb.min.y; }
             if bb.min.z < min.z { min.z = bb.min.z; }
@@ -89,6 +111,7 @@ impl Entity for AABB {
         ColliderResult {
             normal: Vector3 {x: 0., y: 0., z: 0.},
             collision: true,
+            material: None,
             position: Point3::from_vec(hit_point)
         }
     }
@@ -105,6 +128,11 @@ impl Entity for AABB {
     fn position(&self) -> Point3<f32> {
         let pos = self.min + (self.max - self.min) / 2.;
         Point3 {x: pos.x, y: pos.y, z: pos.z}
+    }
+
+    fn translate(&mut self, vec: Vector3<f32>) {
+        self.min += vec;
+        self.max += vec;
     }
 }
 
