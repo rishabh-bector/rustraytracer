@@ -8,7 +8,7 @@ use crate::geometry::aabb::AABB;
 
 use cgmath::{EuclideanSpace, InnerSpace, Matrix4, Point3, Vector3};
 use obj::{load_obj, Obj}; 
-use std::{borrow::Borrow, cell::RefCell, fs::File, ops::Deref, rc::Rc};
+use std::{fs::File, ops::Deref, sync::{Arc, Mutex}};
 use std::io::BufReader;
 use crate::cgmath::Transform;
 
@@ -16,7 +16,7 @@ pub struct Model {
     material: Material,
     tree: KDTree<Triangle>,
     position: Point3<f32>,
-    triangles: Vec<Rc<RefCell<Triangle>>>,
+    triangles: Vec<Arc<Mutex<Triangle>>>,
     aa_bb: AABB
 }
 
@@ -45,10 +45,10 @@ impl Model {
         }
         println!("Model has {} triangles.", triangles.len());
         println!("Building k-d tree with model's triangles...");
-        let triangles: Vec<Rc<RefCell<Triangle>>> = triangles.into_iter().map(|a| Rc::new(RefCell::new(a))).collect();
+        let triangles: Vec<Arc<Mutex<Triangle>>> = triangles.into_iter().map(|a| Arc::new(Mutex::new(a))).collect();
         Model {
             material,
-            aa_bb: AABB::from_entities(triangles.iter().map(|a|a.deref().borrow())),
+            aa_bb: AABB::from_entities(triangles.iter().map(|a|a.deref().lock().unwrap())),
             position,
             tree: KDTree::new(triangles.clone()),
             triangles
@@ -79,7 +79,7 @@ impl Entity for Model {
 
     fn translate(&mut self, vec: Vector3<f32>) {
         for triangle in &self.triangles {
-            triangle.borrow_mut().translate(vec);
+            triangle.lock().unwrap().translate(vec);
         }
         self.tree.translate_nodes(vec);
     }
@@ -103,14 +103,14 @@ fn vertex2normal(v: obj::Vertex) -> Vector3<f32> {
 
 pub struct Scene {
     tree: KDTree<Box<dyn Entity>>,
-    models: Vec<Rc<RefCell<Box<dyn Entity>>>>,
+    models: Vec<Arc<Mutex<Box<dyn Entity>>>>,
     position: Point3<f32>,
     aa_bb: AABB
 }
 
 impl Scene {
     pub fn new(models: Vec<Box<dyn Entity>>, position: Point3<f32>) -> Self {
-        let models: Vec<Rc<RefCell<Box<dyn Entity>>>> = models.into_iter().map(|a| Rc::new(RefCell::new(a))).collect();
+        let models: Vec<Arc<Mutex<Box<dyn Entity>>>> = models.into_iter().map(|a| Arc::new(Mutex::new(a))).collect();
         Scene {
             aa_bb: AABB::from_dyn_entities(&models),
             tree: KDTree::new_boxed(models.clone()),
@@ -139,7 +139,7 @@ impl Entity for Scene {
 
     fn translate(&mut self, vec: Vector3<f32>) {
         for model in &self.models {
-            model.borrow_mut().translate(vec);
+            model.lock().unwrap().translate(vec);
         }
         self.tree.translate_nodes(vec);
     }

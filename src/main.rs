@@ -12,16 +12,20 @@ pub mod lighting;
 use common::*; 
 use tracer::*;
 use material::*;
-use geometry::{model::{self, Model, Scene}, sphere::Sphere};
-use geometry::sphere;
+use geometry::{model::{Model}, sphere::Sphere};
 
 use anyhow::Result;
 use cgmath::{Vector3, Point3};
 
+static mut raytracer: RayTracer = RayTracer::default();
+
 fn main() -> Result<()> {
     println!("MAIN!");
 
-    let raytracer = RayTracer::new_default_renderer((1600, 900));
+    unsafe {
+        raytracer = RayTracer::new_default_renderer((1600, 900));
+    }
+
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
     let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.01, 0.1, 20);
@@ -67,7 +71,9 @@ fn main() -> Result<()> {
 
     world.entities = models;
 
-    raytracer.render("./bruh.png".to_owned(), world);
+    unsafe {
+        raytracer.render("./bruh.png".to_owned(), world);
+    }
     Ok(())
 }
 

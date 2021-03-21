@@ -9,7 +9,7 @@ pub struct LightRay {
     pub direction: Vector3<f32>,
 }
 
-pub trait LightSource {
+pub trait LightSource: Sync + Send {
     fn illuminate(&self, pos: Point3<f32>, normal: Vector3<f32>) -> LightRay;
     fn visible(&self, pos: Point3<f32>, normal: Vector3<f32>, world: &World) -> bool;
     fn color(&self) -> Vector3<f32>;
@@ -33,14 +33,14 @@ impl DirectionalLight {
 }
 
 impl LightSource for DirectionalLight {
-    fn illuminate(&self, _pos: Point3<f32>, normal: Vector3<f32>) -> LightRay {
+    fn illuminate(&self, _pos: Point3<f32>, _normal: Vector3<f32>) -> LightRay {
         LightRay {
             power: self.intensity,
             direction: self.direction,
         }
     }
 
-    fn visible(&self, _pos: Point3<f32>, normal: Vector3<f32>, world: &World) -> bool {
+    fn visible(&self, _pos: Point3<f32>, normal: Vector3<f32>, _world: &World) -> bool {
         normal.dot(self.direction) < 0.
     }
 

@@ -1,6 +1,6 @@
 extern crate cgmath;
 
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::{cell::RefCell, ops::Deref, rc::Rc, sync::{Arc, Mutex}};
 
 use crate::material::Material;
 use crate::common::{Entity, ColliderResult, Ray};
@@ -37,11 +37,11 @@ impl AABB {
         AABB { min, max }
     }
 
-    pub fn from_dyn_entities <T: Entity + ?Sized> (entities: &Vec<Rc<RefCell<Box<T>>>>) -> Self {
+    pub fn from_dyn_entities <T: Entity + ?Sized> (entities: &Vec<Arc<Mutex<Box<T>>>>) -> Self {
         let mut min = Point3{x: std::f32::MAX, y: std::f32::MAX, z: std::f32::MAX};
         let mut max = Point3{x: std::f32::MIN, y: std::f32::MIN, z: std::f32::MIN};
         for entity in entities {
-            let bb = entity.borrow().bounding_box();
+            let bb = entity.lock().unwrap().bounding_box();
             if bb.min.x < min.x { min.x = bb.min.x; }
             if bb.min.y < min.y { min.y = bb.min.y; }
             if bb.min.z < min.z { min.z = bb.min.z; }

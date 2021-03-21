@@ -82,83 +82,83 @@ impl RayBehavior for CubemapBehavior {
 }
 
 fn cubemap(x: f32, y: f32, z: f32) -> (u32, f32, f32) {
-    let absX = x.abs();
-    let absY = y.abs();
-    let absZ = z.abs();
+    let abs_x = x.abs();
+    let abs_y = y.abs();
+    let abs_z = z.abs();
 
-    let isXPositive = x > 0.0;
-    let isYPositive = y > 0.0;
-    let isZPositive = z > 0.0;
+    let is_x_positive = x > 0.0;
+    let is_y_positive = y > 0.0;
+    let is_z_positive = z > 0.0;
 
-    let mut maxAxis = 0 as f32;
+    let mut max_axis = 0 as f32;
     let mut uc = 0 as f32;
     let mut vc = 0 as f32;
 
     let mut index = 0 as u32;
 
     // POSITIVE X
-    if isXPositive && absX >= absY && absX >= absZ {
+    if is_x_positive && abs_x >= abs_y && abs_x >= abs_z {
         // u (0 to 1) goes from +z to -z
         // v (0 to 1) goes from -y to +y
-        maxAxis = absX;
+        max_axis = abs_x;
         uc = -z;
         vc = y;
         index = 0;
     }
 
     // NEGATIVE X
-    if !isXPositive && absX >= absY && absX >= absZ {
+    if !is_x_positive && abs_x >= abs_y && abs_x >= abs_z {
         // u (0 to 1) goes from -z to +z
         // v (0 to 1) goes from -y to +y
-        maxAxis = absX;
+        max_axis = abs_x;
         uc = z;
         vc = y;
         index = 1;
     }
 
     // POSITIVE Y
-    if isYPositive && absY >= absX && absY >= absZ {
+    if is_y_positive && abs_y >= abs_x && abs_y >= abs_z {
         // u (0 to 1) goes from -x to +x
         // v (0 to 1) goes from +z to -z
-        maxAxis = absY;
+        max_axis = abs_y;
         uc = x;
         vc = -z;
         index = 2;
     }
 
     // NEGATIVE Y
-    if !isYPositive && absY >= absX && absY >= absZ {
+    if !is_y_positive && abs_y >= abs_x && abs_y >= abs_z {
         // u (0 to 1) goes from -x to +x
         // v (0 to 1) goes from -z to +z
-        maxAxis = absY;
+        max_axis = abs_y;
         uc = x;
         vc = z;
         index = 3;
     }
 
     // POSITIVE Z
-    if isZPositive && absZ >= absX && absZ >= absY {
+    if is_z_positive && abs_z >= abs_x && abs_z >= abs_y {
         // u (0 to 1) goes from -x to +x
         // v (0 to 1) goes from -y to +y
-        maxAxis = absZ;
+        max_axis = abs_z;
         uc = x;
         vc = y;
         index = 4;
     }
 
     // NEGATIVE Z
-    if !isZPositive && absZ >= absX && absZ >= absY {
+    if !is_z_positive && abs_z >= abs_x && abs_z >= abs_y {
         // u (0 to 1) goes from +x to -x
         // v (0 to 1) goes from -y to +y
-        maxAxis = absZ;
+        max_axis = abs_z;
         uc = -x;
         vc = y;
         index = 5;
     }
 
     // Convert range from -1 to 1 to 0 to 1
-    let u = 0.5 * (uc / maxAxis + 1.0);
-    let v = 0.5 * (vc / maxAxis + 1.0);
+    let u = 0.5 * (uc / max_axis + 1.0);
+    let v = 0.5 * (vc / max_axis + 1.0);
 
     (index, u, v)
 }

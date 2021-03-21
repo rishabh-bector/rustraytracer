@@ -1,20 +1,20 @@
 extern crate cgmath;
-use std::{borrow::BorrowMut, cell::RefCell, ops::Deref, rc::Rc};
+use std::{cell::RefCell, ops::Deref, rc::Rc, sync::{Arc, Mutex}};
 
 use crate::{common::{ColliderResult, Ray}, geometry::aabb::AABB };
 use crate::common::Entity;
 use cgmath::{InnerSpace, Point3, Vector3};
 
-pub struct KDTree <T: ?Sized> {
+pub struct KDTree <T> {
     pub left: Option<Box<KDTree<T>>>,
     pub right: Option<Box<KDTree<T>>>,
     pub aa_bb: Option<AABB>,
     pub point: Option<f32>,
-    pub leaf: Option<Vec<Rc<RefCell<T>>>>,
+    pub leaf: Option<Vec<Arc<Mutex<T>>>>,
     pub axis: Option<usize>
 }
 
-impl <T: ?Sized> KDTree<T> {
+impl <T> KDTree<T> {
     pub fn find_point(&self, point: Point3<f32>) -> Option<&KDTree<T>> {
         let mut axis = 0;
         if !self.aa_bb.as_ref().unwrap().contains(&point) { return None }
@@ -36,13 +36,13 @@ impl <T: ?Sized> KDTree<T> {
     }
 }
 
-impl <T: Entity + ?Sized> KDTree<T> {
-    pub fn new(entities: Vec<Rc<RefCell<T>>>) -> Self {
-        let bounding_box = AABB::from_entities(entities.iter().map(|a|a.deref().borrow()));
+impl <T: Entity> KDTree<T> {
+    pub fn new(entities: Vec<Arc<Mutex<T>>>) -> Self {
+        let bounding_box = AABB::from_entities(entities.iter().map(|a|a.deref().lock().unwrap()));
         return KDTree::build_tree(entities, 0, bounding_box);
     }
 
-    fn build_tree(mut entities: Vec<Rc<RefCell<T>>>, depth: usize, bounding_box: AABB) -> Self {
+    fn build_tree(mut entities: Vec<Arc<Mutex<T>>>, depth: usize, bounding_box: AABB) -> Self {
         let axis = depth % 3;
         if entities.len() < 10 {
             return KDTree {
@@ -58,21 +58,21 @@ impl <T: Entity + ?Sized> KDTree<T> {
         let get_max_axis = |a: &T| a.bounding_box().max[axis];
 
         let median_pos = entities.len() / 2;
-        entities.sort_unstable_by(|a, b| get_min_axis(&a.borrow()).partial_cmp(&get_min_axis(&b.borrow())).unwrap());
-        let partition = get_min_axis(&entities[median_pos].borrow());
+        entities.sort_unstable_by(|a, b| get_min_axis(&a.lock().unwrap()).partial_cmp(&get_min_axis(&b.lock().unwrap())).unwrap());
+        let partition = get_min_axis(&entities[median_pos].lock().unwrap());
 
         let entities_orig_length = entities.len();
         let mut right_half = entities.split_off(median_pos);
         let right_orig_length = right_half.len();
 
         for ent in &entities {
-            if get_max_axis(&ent.borrow()) >= partition {
+            if get_max_axis(&ent.lock().unwrap()) >= partition {
                 right_half.push(ent.clone());
             }
         }
 
         for ent in &right_half[..right_orig_length] {
-            if get_min_axis(&ent.borrow()) < partition {
+            if get_min_axis(&ent.lock().unwrap()) < partition {
                 entities.push(ent.clone());
             }
         }
@@ -133,7 +133,7 @@ impl <T: Entity + ?Sized> KDTree<T> {
                 let mut min_distance = std::f32::MAX;
                 let mut closest: Option<ColliderResult> = None;
                 for entity in node.leaf.as_ref().unwrap() {
-                    collision = entity.borrow().collide(ray);
+                    collision = entity.lock().unwrap().collide(ray);
                     if collision.collision {
                         let distance = (collision.position - ray.origin).magnitude2();
                         if distance < min_distance {
@@ -161,13 +161,15 @@ impl <T: Entity + ?Sized> KDTree<T> {
 
 // If we want to have objects of multiple types in the tree, we need a boxed variant.
 
+// ----- ALMOST IDENTICAL DUPLICATED CODE TO THE ABOVE -------------------------------
+
 impl <T: Entity + ?Sized> KDTree<Box<T>> {
-    pub fn new_boxed(entities: Vec<Rc<RefCell<Box<T>>>>) -> Self {
+    pub fn new_boxed(entities: Vec<Arc<Mutex<Box<T>>>>) -> Self {
         let bounding_box = AABB::from_dyn_entities(&entities);
         return KDTree::build_tree_boxed(entities, 0, bounding_box);
     }
 
-    fn build_tree_boxed(mut entities: Vec<Rc<RefCell<Box<T>>>>, depth: usize, bounding_box: AABB) -> Self {
+    fn build_tree_boxed(mut entities: Vec<Arc<Mutex<Box<T>>>>, depth: usize, bounding_box: AABB) -> Self {
         let axis = depth % 3;
         if entities.len() < 10 {
             return KDTree {
@@ -183,21 +185,21 @@ impl <T: Entity + ?Sized> KDTree<Box<T>> {
         let get_max_axis = |a: &T| a.bounding_box().max[axis];
 
         let median_pos = entities.len() / 2;
-        entities.sort_unstable_by(|a, b| get_min_axis(&a.borrow()).partial_cmp(&get_min_axis(&b.borrow())).unwrap());
-        let partition = get_min_axis(&entities[median_pos].borrow());
+        entities.sort_unstable_by(|a, b| get_min_axis(&a.lock().unwrap()).partial_cmp(&get_min_axis(&b.lock().unwrap())).unwrap());
+        let partition = get_min_axis(&entities[median_pos].lock().unwrap());
 
         let entities_orig_length = entities.len();
         let mut right_half = entities.split_off(median_pos);
         let right_orig_length = right_half.len();
 
         for ent in &entities {
-            if get_max_axis(&ent.borrow()) >= partition {
+            if get_max_axis(&ent.lock().unwrap()) >= partition {
                 right_half.push(ent.clone());
             }
         }
 
         for ent in &right_half[..right_orig_length] {
-            if get_min_axis(&ent.borrow()) < partition {
+            if get_min_axis(&ent.lock().unwrap()) < partition {
                 entities.push(ent.clone());
             }
         }
@@ -258,7 +260,7 @@ impl <T: Entity + ?Sized> KDTree<Box<T>> {
                 let mut min_distance = std::f32::MAX;
                 let mut closest: Option<ColliderResult> = None;
                 for entity in node.leaf.as_ref().unwrap() {
-                    collision = entity.borrow().collide(ray);
+                    collision = entity.lock().unwrap().collide(ray);
                     if collision.collision {
                         let distance = (collision.position - ray.origin).magnitude2();
                         if distance < min_distance {

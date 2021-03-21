@@ -5,7 +5,8 @@ use crate::material::*;
 use crate::lighting::*;
 
 use cgmath::{Vector3, Point3, InnerSpace};
-use std::time;
+use image::{ImageBuffer, Pixel};
+use std::{sync::Arc, thread, time};
 
 pub struct RayTracer {
     settings: RenderSettings,
@@ -23,6 +24,17 @@ pub struct Camera {
 }
 
 impl RayTracer {
+    pub const fn default() -> Self {
+        RayTracer {
+            settings: RenderSettings {image_size: (0, 0)},
+            camera: Camera {
+                size: (0., 0.),
+                lens_factor: (0., 0.),
+                position: Point3 {x: 0., y: 0., z: 0.}
+            }
+        }
+    }
+
     pub fn new_default_renderer(size: (u32, u32)) -> RayTracer {
         RayTracer {
             settings: RenderSettings { image_size: size },
@@ -62,11 +74,11 @@ impl RayTracer {
         }
     }
 
-    pub fn render(&self, output: String, world: World) {
+    pub fn render(&'static self, output: String, world: World) {
         println!("Rendering...");
         let timer = time::Instant::now();
 
-        let mut img =
+        let mut img: ImageBuffer<image::Rgb<u8>, Vec<_>> = 
             image::ImageBuffer::new(self.settings.image_size.0, self.settings.image_size.1);
 
         let lense_pos = self.camera.position
@@ -101,6 +113,10 @@ impl RayTracer {
         let tenth = num_pixels / 10;
         let mut i = 0;
 
+        let arc_world = Arc::new(world);
+
+        let mut threads = Vec::with_capacity(num_pixels as usize);
+
         for (x, y, p) in img.enumerate_pixels_mut() {
             let camera_point = self.camera.position;
 
@@ -118,12 +134,14 @@ impl RayTracer {
                 bounce: 0,
             };
 
-            *p = vec_rgb(self.cast(&ray, &world));
+            let arc_world = arc_world.clone();
 
-            // if x == 0 && y == 0 {
-            //     println!("{:?}", ray.direction);
-            // }
-
+            threads.push(
+                (thread::spawn(move || vec_rgb(self.cast(&ray, &arc_world))), p)
+            );
+        }
+        for (thread, p) in threads {
+            *p = thread.join().unwrap();
             if i % tenth == 0 {
                 println!("Progress: {}%", (i as f32) / (num_pixels as f32) * 100.0);
             }
