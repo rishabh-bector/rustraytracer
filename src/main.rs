@@ -17,14 +17,10 @@ use geometry::{model::{Model}, sphere::Sphere};
 use anyhow::Result;
 use cgmath::{Vector3, Point3};
 
-static mut raytracer: RayTracer = RayTracer::default();
-
 fn main() -> Result<()> {
     println!("MAIN!");
 
-    unsafe {
-        raytracer = RayTracer::new_default_renderer((1600, 900));
-    }
+    let raytracer = RayTracer::new_default_renderer((1600, 900));
 
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
@@ -71,9 +67,7 @@ fn main() -> Result<()> {
 
     world.entities = models;
 
-    unsafe {
-        raytracer.render("./bruh.png".to_owned(), world);
-    }
+    raytracer.render("./bruh.png".to_owned(), world);
     Ok(())
 }
 

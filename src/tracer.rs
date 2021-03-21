@@ -5,7 +5,7 @@ use crate::material::*;
 use crate::lighting::*;
 
 use cgmath::{Vector3, Point3, InnerSpace};
-use image::{ImageBuffer, Pixel};
+use image::{ImageBuffer};
 use std::{sync::Arc, thread, time};
 
 pub struct RayTracer {
@@ -74,7 +74,7 @@ impl RayTracer {
         }
     }
 
-    pub fn render(&'static self, output: String, world: World) {
+    pub fn render(self, output: String, world: World) {
         println!("Rendering...");
         let timer = time::Instant::now();
 
@@ -114,15 +114,16 @@ impl RayTracer {
         let mut i = 0;
 
         let arc_world = Arc::new(world);
+        let arc_self = Arc::new(self);
 
         let mut threads = Vec::with_capacity(num_pixels as usize);
 
         for (x, y, p) in img.enumerate_pixels_mut() {
-            let camera_point = self.camera.position;
+            let camera_point = arc_self.camera.position;
 
             let lense_point = lense_ll
-                + (x as f32 / self.settings.image_size.0 as f32) * lense_h
-                + (y as f32 / self.settings.image_size.1 as f32) * lense_v;
+                + (x as f32 / arc_self.settings.image_size.0 as f32) * lense_h
+                + (y as f32 / arc_self.settings.image_size.1 as f32) * lense_v;
             let dir = InnerSpace::normalize(lense_point - camera_point);
 
             // Transform camera
@@ -135,11 +136,13 @@ impl RayTracer {
             };
 
             let arc_world = arc_world.clone();
+            let arc_self = arc_self.clone();
 
             threads.push(
-                (thread::spawn(move || vec_rgb(self.cast(&ray, &arc_world))), p)
+                (thread::spawn(move || vec_rgb(arc_self.cast(&ray, &arc_world))), p)
             );
         }
+
         for (thread, p) in threads {
             *p = thread.join().unwrap();
             if i % tenth == 0 {
