@@ -7,14 +7,14 @@ use crate::common::{Entity, ColliderResult, Ray};
 use cgmath::{InnerSpace, Point3, Vector3};
 
 pub struct Sphere {
-    position: Point3<f32>,
-    radius: f32,
-    radius2: f32,
+    position: Point3<f64>,
+    radius: f64,
+    radius2: f64,
     material: Material,
 }
 
 impl Sphere {
-    pub fn new(position: Point3<f32>, radius: f32, material: Material) -> Sphere {
+    pub fn new(position: Point3<f64>, radius: f64, material: Material) -> Sphere {
         Sphere {
             position,
             radius,
@@ -57,7 +57,7 @@ impl Entity for Sphere {
         Some(&self.material)
     }
 
-    fn position(&self) -> Point3<f32> {
+    fn position(&self) -> Point3<f64> {
         Point3 {
             x: self.position.x,
             y: self.position.y,
@@ -65,7 +65,7 @@ impl Entity for Sphere {
         }
     }
 
-    fn translate(&mut self, vec: Vector3<f32>) {
+    fn translate(&mut self, vec: Vector3<f64>) {
         self.position += vec;
     }
 }

@@ -7,13 +7,13 @@ use crate::lighting::LightRay;
 use cgmath::{Vector3, InnerSpace};
 
 pub struct LambertBehavior {
-    albedo: f32,
-    mix: f32,
-    color: Vector3<f32>,
+    albedo: f64,
+    mix: f64,
+    color: Vector3<f64>,
 }
 
 impl LambertBehavior {
-    pub fn new(albedo: f32, mix: f32, color: Vector3<f32>) -> LambertBehavior {
+    pub fn new(albedo: f64, mix: f64, color: Vector3<f64>) -> LambertBehavior {
         LambertBehavior { albedo, mix, color }
     }
 }
@@ -25,7 +25,7 @@ impl RayBehavior for LambertBehavior {
         world: &World,
         collision: &ColliderResult,
         _tracer: &RayTracer,
-    ) -> Option<Vector3<f32>> {
+    ) -> Option<Vector3<f64>> {
         let mut result = Vector3 {
             x: 0.,
             y: 0.,
@@ -36,7 +36,7 @@ impl RayBehavior for LambertBehavior {
                 let LightRay { power, direction } =
                     light_source.illuminate(collision.position, collision.normal);
                 let power =
-                    power * (self.albedo / std::f32::consts::PI) * -collision.normal.dot(direction);
+                    power * (self.albedo / std::f64::consts::PI) * -collision.normal.dot(direction);
                 let power = power.max(0.);
                 result += self.color * power;
             }
@@ -44,7 +44,7 @@ impl RayBehavior for LambertBehavior {
         Some(result)
     }
 
-    fn mix(&self) -> f32 {
+    fn mix(&self) -> f64 {
         self.mix
     }
 }

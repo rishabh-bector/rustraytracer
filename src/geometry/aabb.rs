@@ -1,19 +1,20 @@
 extern crate cgmath;
 
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::{ ops::Deref };
 
 use crate::material::Material;
 use crate::common::{Entity, ColliderResult, Ray};
 
 use cgmath::{EuclideanSpace, Point3, Vector3};
 
+#[derive(Copy, Clone)]
 pub struct AABB {
-    pub min: Point3<f32>,
-    pub max: Point3<f32>
+    pub min: Point3<f64>,
+    pub max: Point3<f64>
 }
 
 impl AABB {
-    pub fn new(min: Point3<f32>, max: Point3<f32>) -> AABB {
+    pub fn new(min: Point3<f64>, max: Point3<f64>) -> AABB {
         AABB { min, max }
     }
 
@@ -22,8 +23,8 @@ impl AABB {
     }
 
     pub fn from_entities<T: Entity + ?Sized> (entities: impl Iterator<Item = impl Deref<Target = T>>) -> Self {
-        let mut min = Point3{x: std::f32::MAX, y: std::f32::MAX, z: std::f32::MAX};
-        let mut max = Point3{x: std::f32::MIN, y: std::f32::MIN, z: std::f32::MIN};
+        let mut min = Point3{x: std::f64::MAX, y: std::f64::MAX, z: std::f64::MAX};
+        let mut max = Point3{x: std::f64::MIN, y: std::f64::MIN, z: std::f64::MIN};
         for entity in entities {
             let bb = entity.bounding_box();
             if bb.min.x < min.x { min.x = bb.min.x; }
@@ -37,23 +38,7 @@ impl AABB {
         AABB { min, max }
     }
 
-    pub fn from_dyn_entities <T: Entity + ?Sized> (entities: &Vec<Rc<RefCell<Box<T>>>>) -> Self {
-        let mut min = Point3{x: std::f32::MAX, y: std::f32::MAX, z: std::f32::MAX};
-        let mut max = Point3{x: std::f32::MIN, y: std::f32::MIN, z: std::f32::MIN};
-        for entity in entities {
-            let bb = entity.borrow().bounding_box();
-            if bb.min.x < min.x { min.x = bb.min.x; }
-            if bb.min.y < min.y { min.y = bb.min.y; }
-            if bb.min.z < min.z { min.z = bb.min.z; }
-
-            if bb.max.x > max.x { max.x = bb.max.x; }
-            if bb.max.y > max.y { max.y = bb.max.y; }
-            if bb.max.z > max.z { max.z = bb.max.z; }
-        }
-        AABB { min, max }
-    }
-
-    pub fn contains (&self, point: &Point3<f32>) -> bool {
+    pub fn contains (&self, point: &Point3<f64>) -> bool {
         if point.x > self.max.x || point.x < self.min.x { return false; }
         if point.y > self.max.y || point.y < self.min.y { return false; }
         if point.z > self.max.z || point.z < self.min.z { return false; }
@@ -93,7 +78,7 @@ impl Entity for AABB {
         let times = (0..3).map(|i| 
                 if !one_over_dir[i].is_finite() {
                     if candidate_dist[i] == 0. {-1.}
-                    else {std::f32::MAX}
+                    else {std::f64::MAX}
                 } else { candidate_dist[i] * one_over_dir[i] });
         if inside {
             hit_point = ray.parameterize(
@@ -125,22 +110,13 @@ impl Entity for AABB {
 
     fn material(&self) -> Option<&Material> { None }
     
-    fn position(&self) -> Point3<f32> {
+    fn position(&self) -> Point3<f64> {
         let pos = self.min + (self.max - self.min) / 2.;
         Point3 {x: pos.x, y: pos.y, z: pos.z}
     }
 
-    fn translate(&mut self, vec: Vector3<f32>) {
+    fn translate(&mut self, vec: Vector3<f64>) {
         self.min += vec;
         self.max += vec;
-    }
-}
-
-impl Clone for AABB {
-    fn clone(&self) -> Self {
-        AABB {
-            max: self.max.clone(),
-            min: self.min.clone()
-        }
     }
 }

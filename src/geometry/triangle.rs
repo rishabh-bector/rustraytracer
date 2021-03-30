@@ -8,15 +8,15 @@ use cgmath::{Vector3, InnerSpace, Point3};
 
 #[derive(Clone)]
 pub struct Triangle {
-    pub v0: Point3<f32>,
-    pub v1: Point3<f32>,
-    pub v2: Point3<f32>,
-    pub normal: Vector3<f32>,
+    pub v0: Point3<f64>,
+    pub v1: Point3<f64>,
+    pub v2: Point3<f64>,
+    pub normal: Vector3<f64>,
     material: Material
 }
 
 impl Triangle {
-    pub fn new(v0: Point3<f32>, v1: Point3<f32>, v2: Point3<f32>, normal: Vector3<f32>, material: Material) -> Triangle {
+    pub fn new(v0: Point3<f64>, v1: Point3<f64>, v2: Point3<f64>, normal: Vector3<f64>, material: Material) -> Triangle {
         Triangle { v0, v1, v2, normal, material }
     }
 }
@@ -26,7 +26,7 @@ impl Entity for Triangle {
 
         // Möller–Trumbore intersection algorithm
 
-        const EPSILON: f32 = 0.0000001;
+        const EPSILON: f64 = 0.0000001;
         let edge1 = self.v1 - self.v0;
         let edge2 = self.v2 - self.v0;
         let h = ray.direction.cross(edge2);
@@ -64,7 +64,7 @@ impl Entity for Triangle {
         )
     }
 
-    fn position(&self) -> Point3<f32> {
+    fn position(&self) -> Point3<f64> {
         Point3 {
             x: (self.v0.x + self.v1.x + self.v2.x) / 3.,
             y: (self.v0.y + self.v1.y + self.v2.y) / 3.,
@@ -76,7 +76,7 @@ impl Entity for Triangle {
         None
     }
 
-    fn translate(&mut self, vec: Vector3<f32>) {
+    fn translate(&mut self, vec: Vector3<f64>) {
         self.v0 += vec;
         self.v1 += vec;
         self.v2 += vec;

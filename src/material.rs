@@ -13,16 +13,16 @@ use cgmath::{Vector3};
 #[derive(Clone)]
 pub struct Material {
     pub shaders: Vec<Rc<dyn RayBehavior>>,
-    pub color: Vector3<f32>,
+    pub color: Vector3<f64>,
 }
 
 impl Material { 
     pub fn new_lambert_material(
-        color: Vector3<f32>,
-        albedo: f32,
-        lambert: f32,
-        reflective: f32,
-        phong: f32,
+        color: Vector3<f64>,
+        albedo: f64,
+        lambert: f64,
+        reflective: f64,
+        phong: f64,
         alpha: i32,
     ) -> Material {
         let lambert_behavior = LambertBehavior::new(albedo, lambert, color);

@@ -12,8 +12,7 @@ pub mod lighting;
 use common::*; 
 use tracer::*;
 use material::*;
-use geometry::{model::{self, Model, Scene}, sphere::Sphere};
-use geometry::sphere;
+use geometry::{model::{ Model }, sphere::Sphere, aabb::AABB, scene::{Scene}};
 
 use anyhow::Result;
 use cgmath::{Vector3, Point3};
@@ -21,12 +20,15 @@ use cgmath::{Vector3, Point3};
 fn main() -> Result<()> {
     println!("MAIN!");
 
-    let raytracer = RayTracer::new_default_renderer((1600, 900));
+    let raytracer = RayTracer::new_default_renderer((1920, 1080));
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
     let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.01, 0.1, 20);
     let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0, 1.0, 0.1, 20);
-    let sphere = Box::new(Sphere::new(
+
+    entity_enum!(SceneType, Sphere, Model);
+
+    let sphere = Sphere::new(
         Point3 {
             x: -3.0,
             y: 0.0,
@@ -34,38 +36,26 @@ fn main() -> Result<()> {
         },
         1.0,
         mat1,
-    ));
-    let sphere2 = Box::new(Sphere::new(
+    );
+    let sphere2 = Sphere::new(
         Point3 {
             x: 2.0,
             y: 0.0,
             z: 8.0,
         },
         1.0,
-        mat2,
-    ));
+        mat2.clone(),
+    );
 
-
-    // let bounded_box = AABB::new(
-    //     Vector3{x: 1.0, y: 1.0, z: 3.0}, 
-    //     Vector3{x: 1.25, y: 1.25, z: 3.25}, 
-    //     Material::new_lambert_material(color_vec(100, 100, 20), 0.5, 0.5, 0.0, 0.5, 1),
-    // );
-
-    let burger = Box::new(Model::new(
+    let burger = Model::new(
         "./obj/ufo_fix.obj",
-        Material::new_lambert_material(color_vec(100, 100, 50), 1.0, 1.0, 0.0, 0.1, 20),
+        Material::new_lambert_material(color_vec(100, 100, 50), 1.0, 1.0, 0.0, 0.3, 20),
         Point3 {x: 0.0, y: 30.0, z: 70.0},
         Vector3 {x: 1.0, y: -1.0, z: 1.0}
-    ));
+    );
 
-    let models: Vec<Box<dyn Entity>> = vec![burger, sphere, sphere2];
-
-    // Not faster with 3 objects
-    // let scene = Box::new(Scene::new(models, Point3 {x: 0., y: 0., z: 0.}));
-    // world.entities.push(scene);
-
-    world.entities = models;
+    let scene = Box::new(scene!(SceneType, Point3{x: 0., y:0., z:0.}, Model(burger), Sphere(sphere), Sphere(sphere2)));
+    world.entities.push(scene);
 
     raytracer.render("./bruh.png".to_owned(), world);
     Ok(())

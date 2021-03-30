@@ -8,20 +8,20 @@ use crate::geometry::aabb::AABB;
 
 use cgmath::{EuclideanSpace, InnerSpace, Matrix4, Point3, Vector3};
 use obj::{load_obj, Obj}; 
-use std::{borrow::Borrow, cell::RefCell, fs::File, ops::Deref, rc::Rc};
+use std::{borrow::Borrow, fs::File, ops::Deref, rc::Rc};
 use std::io::BufReader;
 use crate::cgmath::Transform;
 
 pub struct Model {
     material: Material,
     tree: KDTree<Triangle>,
-    position: Point3<f32>,
-    triangles: Vec<Rc<RefCell<Triangle>>>,
+    position: Point3<f64>,
+    triangles: Vec<Rc<Triangle>>,
     aa_bb: AABB
 }
 
 impl Model {
-    pub fn new(path: &str, material: Material, position: Point3<f32>, scale: Vector3<f32>) -> Model {
+    pub fn new(path: &str, material: Material, position: Point3<f64>, scale: Vector3<f64>) -> Model {
         println!("Opening model @ {}", path);
         let input = BufReader::new(File::open(path).unwrap());
         let model: Obj = load_obj(input).unwrap();
@@ -45,7 +45,7 @@ impl Model {
         }
         println!("Model has {} triangles.", triangles.len());
         println!("Building k-d tree with model's triangles...");
-        let triangles: Vec<Rc<RefCell<Triangle>>> = triangles.into_iter().map(|a| Rc::new(RefCell::new(a))).collect();
+        let triangles: Vec<Rc<Triangle>> = triangles.into_iter().map(|a| Rc::new(a)).collect();
         Model {
             material,
             aa_bb: AABB::from_entities(triangles.iter().map(|a|a.deref().borrow())),
@@ -69,7 +69,7 @@ impl Entity for Model {
         self.aa_bb.clone()
     }
 
-    fn position(&self) -> Point3<f32> {
+    fn position(&self) -> Point3<f64> {
         Point3 {
             x: self.position.x,
             y: self.position.y,
@@ -77,70 +77,27 @@ impl Entity for Model {
         }
     }
 
-    fn translate(&mut self, vec: Vector3<f32>) {
+    fn translate(&mut self, vec: Vector3<f64>) {
         for triangle in &self.triangles {
-            triangle.borrow_mut().translate(vec);
+            let triangle_mut = triangle.as_ref() as *const Triangle as *mut Triangle;
+            unsafe {(*triangle_mut).translate(vec)}
         }
         self.tree.translate_nodes(vec);
     }
 }
 
-fn vertex2point(v: obj::Vertex) -> Point3<f32> {
+fn vertex2point(v: obj::Vertex) -> Point3<f64> {
     Point3 {
-        x: v.position[0],
-        y: v.position[1],
-        z: v.position[2],
+        x: v.position[0] as f64,
+        y: v.position[1] as f64,
+        z: v.position[2] as f64,
     }
 }
 
-fn vertex2normal(v: obj::Vertex) -> Vector3<f32> {
+fn vertex2normal(v: obj::Vertex) -> Vector3<f64> {
     Vector3 {
-        x: v.normal[0],
-        y: v.normal[1],
-        z: v.normal[2],
+        x: v.normal[0] as f64,
+        y: v.normal[1] as f64,
+        z: v.normal[2] as f64,
     }.normalize()
-}
-
-pub struct Scene {
-    tree: KDTree<Box<dyn Entity>>,
-    models: Vec<Rc<RefCell<Box<dyn Entity>>>>,
-    position: Point3<f32>,
-    aa_bb: AABB
-}
-
-impl Scene {
-    pub fn new(models: Vec<Box<dyn Entity>>, position: Point3<f32>) -> Self {
-        let models: Vec<Rc<RefCell<Box<dyn Entity>>>> = models.into_iter().map(|a| Rc::new(RefCell::new(a))).collect();
-        Scene {
-            aa_bb: AABB::from_dyn_entities(&models),
-            tree: KDTree::new_boxed(models.clone()),
-            models,
-            position
-        }
-    }
-}
-
-impl Entity for Scene {
-    fn collide(&self, ray: &Ray) -> ColliderResult {
-        self.tree.collide_boxed(ray)
-    }
-
-    fn material(&self) -> Option<&Material> {
-        None
-    }
-
-    fn bounding_box(&self) -> AABB {
-        self.aa_bb.clone()
-    }
-
-    fn position(&self) -> Point3<f32> {
-        self.position
-    }
-
-    fn translate(&mut self, vec: Vector3<f32>) {
-        for model in &self.models {
-            model.borrow_mut().translate(vec);
-        }
-        self.tree.translate_nodes(vec);
-    }
 }
