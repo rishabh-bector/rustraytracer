@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{self, Data, DeriveInput, Fields, parse_macro_input};
+use syn::{self, Data, DeriveInput, parse_macro_input};
 
 #[proc_macro_derive(Entity)]
 pub fn entity_derive(input: TokenStream) -> TokenStream {
