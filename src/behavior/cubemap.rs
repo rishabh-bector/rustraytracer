@@ -9,39 +9,39 @@ use cgmath::Vector3;
 pub struct CubemapBehavior {
     // left, right, front, back, down, up
     maps: [image::ImageBuffer<image::Rgb<u8>, std::vec::Vec<u8>>; 6],
-    mix: f32,
+    mix: f64,
 }
 
 impl CubemapBehavior {
-    pub fn new(folder: &str, mix: f32) -> CubemapBehavior {
+    pub fn new(folder: &str, mix: f64) -> CubemapBehavior {
         print!("\nLoading assets...");
         std::io::stdout().flush().unwrap();
         let left = image::open(format!("{}/left.png", folder))
             .unwrap()
-            .to_rgb();
+            .to_rgb8();
         print!(".");
         std::io::stdout().flush().unwrap();
         let right = image::open(format!("{}/right.png", folder))
             .unwrap()
-            .to_rgb();
+            .to_rgb8();
         print!(".");
         std::io::stdout().flush().unwrap();
         let front = image::open(format!("{}/front.png", folder))
             .unwrap()
-            .to_rgb();
+            .to_rgb8();
         print!(".");
         std::io::stdout().flush().unwrap();
         let back = image::open(format!("{}/back.png", folder))
             .unwrap()
-            .to_rgb();
+            .to_rgb8();
         print!(".");
         std::io::stdout().flush().unwrap();
-        let up = image::open(format!("{}/up.png", folder)).unwrap().to_rgb();
+        let up = image::open(format!("{}/up.png", folder)).unwrap().to_rgb8();
         print!(".");
         std::io::stdout().flush().unwrap();
         let down = image::open(format!("{}/down.png", folder))
             .unwrap()
-            .to_rgb();
+            .to_rgb8();
         print!(".");
         std::io::stdout().flush().unwrap();
         let maps: [image::ImageBuffer<image::Rgb<u8>, std::vec::Vec<u8>>; 6] =
@@ -59,12 +59,12 @@ impl RayBehavior for CubemapBehavior {
         _world: &World,
         _collision: &ColliderResult,
         _tracer: &RayTracer,
-    ) -> Option<Vector3<f32>> {
+    ) -> Option<Vector3<f64>> {
         let result = cubemap(ray.direction.x, ray.direction.y, ray.direction.z);
         let map = &self.maps[result.0 as usize];
         let mut px = (
-            (result.1 * map.dimensions().0 as f32) as u32,
-            (result.2 * map.dimensions().1 as f32) as u32,
+            (result.1 * map.dimensions().0 as f64) as u32,
+            (result.2 * map.dimensions().1 as f64) as u32,
         );
         if px.0 >= map.dimensions().0 {
             px.0 = map.dimensions().0 - 1;
@@ -76,12 +76,12 @@ impl RayBehavior for CubemapBehavior {
         Some(rgb_vec(*sample))
     }
 
-    fn mix(&self) -> f32 {
+    fn mix(&self) -> f64 {
         self.mix
     }
 }
 
-fn cubemap(x: f32, y: f32, z: f32) -> (u32, f32, f32) {
+fn cubemap(x: f64, y: f64, z: f64) -> (u32, f64, f64) {
     let abs_x = x.abs();
     let abs_y = y.abs();
     let abs_z = z.abs();
@@ -90,9 +90,9 @@ fn cubemap(x: f32, y: f32, z: f32) -> (u32, f32, f32) {
     let is_y_positive = y > 0.0;
     let is_z_positive = z > 0.0;
 
-    let mut max_axis = 0 as f32;
-    let mut uc = 0 as f32;
-    let mut vc = 0 as f32;
+    let mut max_axis = 0 as f64;
+    let mut uc = 0 as f64;
+    let mut vc = 0 as f64;
 
     let mut index = 0 as u32;
 

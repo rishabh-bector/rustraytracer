@@ -7,18 +7,18 @@ use crate::lighting::LightRay;
 use cgmath::{Vector3, InnerSpace};
 
 pub struct PhongBehavior {
-    mix: f32,
+    mix: f64,
     alpha: i32,
 }
 
 impl PhongBehavior {
-    pub fn new(mix: f32, alpha: i32) -> PhongBehavior {
+    pub fn new(mix: f64, alpha: i32) -> PhongBehavior {
         PhongBehavior{mix, alpha}
     }
 }
 
 impl RayBehavior for PhongBehavior {
-    fn mix(&self) -> f32 {
+    fn mix(&self) -> f64 {
         self.mix
     }
 
@@ -28,7 +28,7 @@ impl RayBehavior for PhongBehavior {
         world: &World,
         collision: &ColliderResult,
         _tracer: &RayTracer,
-    ) -> Option<Vector3<f32>> {
+    ) -> Option<Vector3<f64>> {
         let mut result = Vector3 {
             x: 0.,
             y: 0.,

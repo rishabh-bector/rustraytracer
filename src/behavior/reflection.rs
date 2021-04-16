@@ -6,11 +6,11 @@ use crate::tracer::RayTracer;
 use cgmath::{Vector3, InnerSpace};
 
 pub struct ReflectionBehavior {
-    mix: f32,
+    mix: f64,
 }
 
 impl ReflectionBehavior {
-    pub fn new(mix: f32) -> ReflectionBehavior {
+    pub fn new(mix: f64) -> ReflectionBehavior {
         ReflectionBehavior { mix }
     }
 }
@@ -22,7 +22,7 @@ impl RayBehavior for ReflectionBehavior {
         world: &World,
         collision: &ColliderResult,
         tracer: &RayTracer,
-    ) -> Option<Vector3<f32>> {
+    ) -> Option<Vector3<f64>> {
         if ray.bounce > 2 {
             return None;
         };
@@ -34,11 +34,11 @@ impl RayBehavior for ReflectionBehavior {
         Some(tracer.cast(&reflected, world))
     }
 
-    fn mix(&self) -> f32 {
+    fn mix(&self) -> f64 {
         self.mix
     }
 }
 
-fn reflect(d: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
+fn reflect(d: Vector3<f64>, n: Vector3<f64>) -> Vector3<f64> {
     d - (n * (n.dot(d)) * 2.0)
 }

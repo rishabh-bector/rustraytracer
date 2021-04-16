@@ -1,3 +1,7 @@
-/target
-/derive_entity/target
+Cargo.lock
+target
+derive_entity/target
 */Cargo.lock
+.vscode
+flamegraph.svg
+perf.data*

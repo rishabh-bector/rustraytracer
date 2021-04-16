@@ -18,9 +18,9 @@ pub struct RenderSettings {
 }
 
 pub struct Camera {
-    size: (f32, f32),
-    lens_factor: (f32, f32),
-    position: Point3<f32>,
+    size: (f64, f64),
+    lens_factor: (f64, f64),
+    position: Point3<f64>,
 }
 
 impl RayTracer {
@@ -126,8 +126,8 @@ impl RayTracer {
             let camera_point = arc_self.camera.position;
 
             let lense_point = lense_ll
-                + (x as f32 / arc_self.settings.image_size.0 as f32) * lense_h
-                + (y as f32 / arc_self.settings.image_size.1 as f32) * lense_v;
+                + (x as f64 / self.settings.image_size.0 as f64) * lense_h
+                + (y as f64 / self.settings.image_size.1 as f64) * lense_v;
             let dir = InnerSpace::normalize(lense_point - camera_point);
 
             // Transform camera
@@ -174,8 +174,8 @@ impl RayTracer {
         println!("Finished in {}ms", duration.as_millis());
     }
 
-    pub fn cast(&self, ray: &Ray, world: &World) -> Vector3<f32> {
-        let mut min_distance = f32::MAX;
+    pub fn cast(&self, ray: &Ray, world: &World) -> Vector3<f64> {
+        let mut min_distance = f64::MAX;
         let mut closest_collision = None;
         for entity in world.entities.iter() {
             let ent = entity.as_ref();
@@ -191,7 +191,7 @@ impl RayTracer {
 
         if let Some(result) = closest_collision {
             let material = result.material.as_ref().unwrap();
-            let mut final_color: Vector3<f32> = material.color * world.ambient;
+            let mut final_color: Vector3<f64> = material.color * world.ambient;
             for behavior in material.shaders.iter() {
                 match behavior.as_ref().compute(ray, world, &result, self) {
                     Some(color) => {

@@ -5,24 +5,24 @@ use crate::common::*;
 use cgmath::{InnerSpace, Point3, Vector3};
 
 pub struct LightRay {
-    pub power: f32,
-    pub direction: Vector3<f32>,
+    pub power: f64,
+    pub direction: Vector3<f64>,
 }
 
 pub trait LightSource: Sync + Send {
-    fn illuminate(&self, pos: Point3<f32>, normal: Vector3<f32>) -> LightRay;
-    fn visible(&self, pos: Point3<f32>, normal: Vector3<f32>, world: &World) -> bool;
-    fn color(&self) -> Vector3<f32>;
+    fn illuminate(&self, pos: Point3<f64>, normal: Vector3<f64>) -> LightRay;
+    fn visible(&self, pos: Point3<f64>, normal: Vector3<f64>, world: &World) -> bool;
+    fn color(&self) -> Vector3<f64>;
 }
 
 pub struct DirectionalLight {
-    direction: Vector3<f32>,
-    color: Vector3<f32>,
-    intensity: f32,
+    direction: Vector3<f64>,
+    color: Vector3<f64>,
+    intensity: f64,
 }
 
 impl DirectionalLight {
-    pub fn new(direction: Vector3<f32>, color: Vector3<f32>, intensity: f32) -> Self {
+    pub fn new(direction: Vector3<f64>, color: Vector3<f64>, intensity: f64) -> Self {
         let direction = direction.normalize();
         Self {
             direction,
@@ -33,31 +33,31 @@ impl DirectionalLight {
 }
 
 impl LightSource for DirectionalLight {
-    fn illuminate(&self, _pos: Point3<f32>, _normal: Vector3<f32>) -> LightRay {
+    fn illuminate(&self, _pos: Point3<f64>, _normal: Vector3<f64>) -> LightRay {
         LightRay {
             power: self.intensity,
             direction: self.direction,
         }
     }
 
-    fn visible(&self, _pos: Point3<f32>, normal: Vector3<f32>, _world: &World) -> bool {
+    fn visible(&self, _pos: Point3<f64>, normal: Vector3<f64>, _world: &World) -> bool {
         normal.dot(self.direction) < 0.
     }
 
-    fn color(&self) -> Vector3<f32> {
+    fn color(&self) -> Vector3<f64> {
         self.color
     }
 }
 
 pub struct PointLight {
-    position: Point3<f32>,
-    color: Vector3<f32>,
-    brightness: f32,
-    attenuation: f32,
+    position: Point3<f64>,
+    color: Vector3<f64>,
+    brightness: f64,
+    attenuation: f64,
 }
 
 impl LightSource for PointLight {
-    fn illuminate(&self, pos: Point3<f32>, _normal: Vector3<f32>) -> LightRay {
+    fn illuminate(&self, pos: Point3<f64>, _normal: Vector3<f64>) -> LightRay {
         let direction = pos - self.position;
         let distance2 = direction.magnitude2();
         let direction = direction.normalize();
@@ -67,7 +67,7 @@ impl LightSource for PointLight {
         }
     }
 
-    fn visible(&self, pos: Point3<f32>, _normal: Vector3<f32>, world: &World) -> bool {
+    fn visible(&self, pos: Point3<f64>, _normal: Vector3<f64>, world: &World) -> bool {
         let direction = self.position - pos;
         let ray = Ray {
             origin: pos,
@@ -83,7 +83,7 @@ impl LightSource for PointLight {
         false
     }
 
-    fn color(&self) -> Vector3<f32> {
+    fn color(&self) -> Vector3<f64> {
         self.color
     }
 }
