@@ -126,8 +126,8 @@ impl RayTracer {
             let camera_point = arc_self.camera.position;
 
             let lense_point = lense_ll
-                + (x as f64 / self.settings.image_size.0 as f64) * lense_h
-                + (y as f64 / self.settings.image_size.1 as f64) * lense_v;
+                + (x as f64 / arc_self.settings.image_size.0 as f64) * lense_h
+                + (y as f64 / arc_self.settings.image_size.1 as f64) * lense_v;
             let dir = InnerSpace::normalize(lense_point - camera_point);
 
             // Transform camera

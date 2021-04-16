@@ -5,7 +5,9 @@ use crate::{common::{ColliderResult, Ray}, geometry::aabb::AABB };
 use crate::common::Entity;
 use cgmath::{InnerSpace, Point3, Vector3};
 
-type RopeType<T> = [Option<*const KDTree<T>>; 6];
+struct RopeType<T>([Option<*const KDTree<T>>; 6]);
+unsafe impl <T> Sync for RopeType<T>{}
+unsafe impl <T> Send for RopeType<T>{}
 
 pub struct KDTree <T> {
     aa_bb: AABB,
@@ -44,7 +46,7 @@ impl <T: Entity> KDTree<T> {
     pub fn new(entities: Vec<Arc<Mutex<T>>>) -> Self {
         let bounding_box = AABB::from_entities(entities.iter().map(|a|a.deref().lock().unwrap()));
         let mut tree = KDTree::build_tree(entities, 0, bounding_box);
-        tree.make_ropes([None, None, None, None, None, None], tree.as_ref());
+        tree.make_ropes(RopeType([None, None, None, None, None, None]), tree.as_ref());
         *tree
     }
 
@@ -57,7 +59,7 @@ impl <T: Entity> KDTree<T> {
                 partition: None,
                 axis: None,
                 aa_bb: bounding_box,
-                ropes: [None, None, None, None, None, None],
+                ropes: RopeType([None, None, None, None, None, None]),
                 leaf: Some(entities)
             });
         }
@@ -95,7 +97,7 @@ impl <T: Entity> KDTree<T> {
                 partition: None,
                 axis: None,
                 aa_bb: bounding_box,
-                ropes: [None, None, None, None, None, None],
+                ropes: RopeType([None, None, None, None, None, None]),
                 leaf: Some(entities)
             });
         } else if right_half.len() >= entities_orig_length {
@@ -104,7 +106,7 @@ impl <T: Entity> KDTree<T> {
                 right: None,
                 partition: None,
                 axis: None,
-                ropes: [None, None, None, None, None, None],
+                ropes: RopeType([None, None, None, None, None, None]),
                 aa_bb: bounding_box,
                 leaf: Some(right_half)
             });
@@ -129,13 +131,14 @@ impl <T: Entity> KDTree<T> {
             right: Some(KDTree::build_tree(right_half, depth + 1, right_bb)),
             axis: Some(axis),
             partition: Some(partition),
-            ropes: [None, None, None, None, None, None],
+            ropes: RopeType([None, None, None, None, None, None]),
             leaf: None
         })
     }
     
-    fn make_ropes(&mut self, mut ropes: RopeType<T>, root: *const KDTree<T>) {
+    fn make_ropes(&mut self, ropes: RopeType<T>, root: *const KDTree<T>) {
         let root = unsafe {&*root};
+        let mut ropes = ropes.0;
         if let None = self.leaf {
             let axis = self.axis.unwrap();
 
@@ -162,13 +165,13 @@ impl <T: Entity> KDTree<T> {
 
             let mut left_ropes = ropes;
             left_ropes[axis + 3] = Some(right.as_ref());
-            left.make_ropes(left_ropes, root);
+            left.make_ropes(RopeType(left_ropes), root);
 
             let mut right_ropes = ropes;
             right_ropes[axis] = Some(left.as_ref());
-            right.make_ropes(right_ropes, root);
+            right.make_ropes(RopeType(right_ropes), root);
         } else {
-            self.ropes = ropes;
+            self.ropes = RopeType(ropes);
             for i in 0..6 {
                 if let None = ropes[i] {
                     if i < 3 {
@@ -217,7 +220,7 @@ impl <T: Entity> KDTree<T> {
                 collision = node.aa_bb.collide(&new_ray);
                 point = collision.position + ray.direction * 0.00000000000001;
                 let i = get_plane(point, node.aa_bb);
-                if let Some(neighbor) = node.ropes[i as usize].as_ref() {
+                if let Some(neighbor) = node.ropes.0[i as usize].as_ref() {
                     let neighbor = unsafe {&**neighbor};
                     next_leaf = neighbor.find_point(point);
                 } else {

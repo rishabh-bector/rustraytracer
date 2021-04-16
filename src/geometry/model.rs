@@ -15,7 +15,7 @@ use crate::cgmath::Transform;
 pub struct Model {
     material: Material,
     tree: KDTree<Triangle>,
-    position: Point3<f32>,
+    position: Point3<f64>,
     triangles: Vec<Arc<Mutex<Triangle>>>,
     aa_bb: AABB
 }

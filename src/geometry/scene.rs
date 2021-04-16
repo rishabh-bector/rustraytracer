@@ -4,7 +4,7 @@ use cgmath::{Point3, Vector3};
 use crate::common::*;
 use crate::geometry::{kdtree::KDTree, aabb::AABB};
 use crate::material::Material;
-use std::rc::Rc;
+use std::{ops::Deref, sync::{Arc, Mutex}};
 
 // Invocation: entity_enum! (Name, Type1, Type2, ...)
 // Creates an enum type with name Name which auto-implements entity.
@@ -31,16 +31,16 @@ macro_rules! scene {
 
 pub struct Scene<T: Entity> {
     tree: KDTree<T>,
-    models: Vec<Rc<T>>,
+    models: Vec<Arc<Mutex<T>>>,
     position: Point3<f64>,
     aa_bb: AABB
 }
 
 impl <T: Entity> Scene<T> {
     pub fn new(models: Vec<T>, position: Point3<f64>) -> Self {
-        let models: Vec<Rc<T>> = models.into_iter().map(|a| Rc::new(a)).collect();
+        let models: Vec<Arc<Mutex<T>>> = models.into_iter().map(|a| Arc::new(Mutex::new(a))).collect();
         Scene {
-            aa_bb: AABB::from_entities(models.iter().map(|a|a.as_ref())),
+            aa_bb: AABB::from_entities(models.iter().map(|a|a.lock().unwrap())),
             tree: KDTree::new(models.clone()),
             models,
             position
@@ -67,7 +67,7 @@ impl <T: Entity> Entity for Scene<T> {
 
     fn translate(&mut self, vec: Vector3<f64>) {
         for model in &self.models {
-            let model_mut = model.as_ref() as *const T as *mut T;
+            let model_mut = model.lock().unwrap().deref() as *const T as *mut T;
             unsafe {(*model_mut).translate(vec)}
         }
         self.tree.translate_nodes(vec);
