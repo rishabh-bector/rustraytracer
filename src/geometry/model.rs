@@ -8,7 +8,7 @@ use crate::geometry::aabb::AABB;
 
 use cgmath::{EuclideanSpace, InnerSpace, Matrix4, Point3, Vector3};
 use obj::{load_obj, Obj}; 
-use std::{fs::File, ops::Deref, sync::{Arc, Mutex}};
+use std::{fs::File, sync::{Arc}};
 use std::io::BufReader;
 use crate::cgmath::Transform;
 
@@ -16,7 +16,7 @@ pub struct Model {
     material: Material,
     tree: KDTree<Triangle>,
     position: Point3<f64>,
-    triangles: Vec<Arc<Mutex<Triangle>>>,
+    triangles: Vec<Arc<Triangle>>,
     aa_bb: AABB
 }
 
@@ -45,10 +45,10 @@ impl Model {
         }
         println!("Model has {} triangles.", triangles.len());
         println!("Building k-d tree with model's triangles...");
-        let triangles: Vec<Arc<Mutex<Triangle>>> = triangles.into_iter().map(|a| Arc::new(Mutex::new(a))).collect();
+        let triangles: Vec<Arc<Triangle>> = triangles.into_iter().map(|a| Arc::new(a)).collect();
         Model {
             material,
-            aa_bb: AABB::from_entities(triangles.iter().map(|a|a.deref().lock().unwrap())),
+            aa_bb: AABB::from_entities(triangles.iter().map(|a|a.as_ref())),
             position,
             tree: KDTree::new(triangles.clone()),
             triangles
@@ -79,7 +79,8 @@ impl Entity for Model {
 
     fn translate(&mut self, vec: Vector3<f64>) {
         for triangle in &self.triangles {
-            triangle.lock().unwrap().translate(vec);
+            let triangle = Arc::as_ptr(triangle) as *mut Triangle;
+            unsafe { (*triangle).translate(vec); }
         }
         self.tree.translate_nodes(vec);
     }

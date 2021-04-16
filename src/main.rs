@@ -20,7 +20,7 @@ use cgmath::{Vector3, Point3};
 fn main() -> Result<()> {
     println!("MAIN!");
 
-    let raytracer = RayTracer::new_default_renderer((1600, 900));
+    let raytracer = RayTracer::new_default_renderer((3840, 2160));
 
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
