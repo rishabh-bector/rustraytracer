@@ -1,6 +1,6 @@
 extern crate cgmath;
 
-use std::{ ops::Deref };
+use std::{ops::Deref};
 
 use crate::material::Material;
 use crate::common::{Entity, ColliderResult, Ray};

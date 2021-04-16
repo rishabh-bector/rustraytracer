@@ -12,7 +12,7 @@ pub mod lighting;
 use common::*; 
 use tracer::*;
 use material::*;
-use geometry::{model::{ Model }, sphere::Sphere, aabb::AABB, scene::{Scene}};
+use geometry::{model::{Model}, sphere::Sphere, aabb::AABB, scene::Scene};
 
 use anyhow::Result;
 use cgmath::{Vector3, Point3};
@@ -21,12 +21,11 @@ fn main() -> Result<()> {
     println!("MAIN!");
 
     let raytracer = RayTracer::new_default_renderer((3840, 2160));
+
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
     let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.01, 0.1, 20);
     let mat2 = Material::new_lambert_material(color_vec(0, 0, 0), 0.8, 0.0, 1.0, 0.1, 20);
-
-    entity_enum!(SceneType, Sphere, Model);
 
     let sphere = Sphere::new(
         Point3 {
@@ -54,7 +53,7 @@ fn main() -> Result<()> {
         Vector3 {x: 1.0, y: -1.0, z: 1.0}
     );
 
-    // SLOW WITH ONLY 3 OBJECTS IN THE SCENE
+    // INSANELY SLOW WITH ONLY 3 OBJECTS IN THE SCENE
     // ESPECIALLY WITH MULTITHREADING
     //entity_enum!(SceneType, Sphere, Model);
     //let scene = Box::new(scene!(SceneType, Point3{x: 0., y:0., z:0.}, Model(burger), Sphere(sphere), Sphere(sphere2)));

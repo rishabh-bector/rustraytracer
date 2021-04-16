@@ -1,6 +1,6 @@
 extern crate cgmath;
 
-use std::rc::Rc;
+use std::{sync::Arc};
 
 use crate::common::{RayBehavior, color_vec};
 use crate::behavior::cubemap::CubemapBehavior;
@@ -12,7 +12,7 @@ use cgmath::{Vector3};
 
 #[derive(Clone)]
 pub struct Material {
-    pub shaders: Vec<Rc<dyn RayBehavior>>,
+    pub shaders: Vec<Arc<dyn RayBehavior>>,
     pub color: Vector3<f64>,
 }
 
@@ -28,17 +28,17 @@ impl Material {
         let lambert_behavior = LambertBehavior::new(albedo, lambert, color);
         let ref_be = ReflectionBehavior::new(reflective);
         let phong_behavior = PhongBehavior::new(phong, alpha);
-        let mut shaders: Vec<Rc<dyn RayBehavior>> = Vec::new();
-        shaders.push(Rc::new(lambert_behavior));
-        shaders.push(Rc::new(ref_be));
-        shaders.push(Rc::new(phong_behavior));
+        let mut shaders: Vec<Arc<dyn RayBehavior>> = Vec::new();
+        shaders.push(Arc::new(lambert_behavior));
+        shaders.push(Arc::new(ref_be));
+        shaders.push(Arc::new(phong_behavior));
         Material { shaders, color }
     }
 
     pub fn new_sky_material(cubemap_folder: &str) -> Material {
         let cubemap_behavior = CubemapBehavior::new(cubemap_folder, 1.0);
-        let mut shaders: Vec<Rc<dyn RayBehavior>> = Vec::new();
-        shaders.push(Rc::new(cubemap_behavior));
+        let mut shaders: Vec<Arc<dyn RayBehavior>> = Vec::new();
+        shaders.push(Arc::new(cubemap_behavior));
         Material {
             shaders,
             color: color_vec(0, 0, 0),

@@ -4,7 +4,7 @@ use cgmath::{Point3, Vector3};
 use crate::common::*;
 use crate::geometry::{kdtree::KDTree, aabb::AABB};
 use crate::material::Material;
-use std::rc::Rc;
+use std::{sync::{Arc}};
 
 // Invocation: entity_enum! (Name, Type1, Type2, ...)
 // Creates an enum type with name Name which auto-implements entity.
@@ -31,14 +31,14 @@ macro_rules! scene {
 
 pub struct Scene<T: Entity> {
     tree: KDTree<T>,
-    models: Vec<Rc<T>>,
+    models: Vec<Arc<T>>,
     position: Point3<f64>,
     aa_bb: AABB
 }
 
 impl <T: Entity> Scene<T> {
     pub fn new(models: Vec<T>, position: Point3<f64>) -> Self {
-        let models: Vec<Rc<T>> = models.into_iter().map(|a| Rc::new(a)).collect();
+        let models: Vec<Arc<T>> = models.into_iter().map(|a| Arc::new(a)).collect();
         Scene {
             aa_bb: AABB::from_entities(models.iter().map(|a|a.as_ref())),
             tree: KDTree::new(models.clone()),
