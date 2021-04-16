@@ -218,7 +218,7 @@ impl <T: Entity> KDTree<T> {
                     bounce: 0
                 };
                 collision = node.aa_bb.collide(&new_ray);
-                point = collision.position + ray.direction * 0.00000000000001;
+                point = collision.position + ray.direction * 0.001;
                 let i = get_plane(point, node.aa_bb);
                 if let Some(neighbor) = node.ropes.0[i as usize].as_ref() {
                     let neighbor = unsafe {&**neighbor};
