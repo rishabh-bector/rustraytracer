@@ -1,4 +1,7 @@
 Cargo.lock
-/target
+target
 derive_entity/target
 derive_entity/Cargo.lock
+.vscode
+flamegraph.svg
+perf.data*
