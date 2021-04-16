@@ -20,7 +20,7 @@ use cgmath::{Vector3, Point3};
 fn main() -> Result<()> {
     println!("MAIN!");
 
-    let raytracer = RayTracer::new_default_renderer((1920, 1080));
+    let raytracer = RayTracer::new_default_renderer((3840, 2160));
     let mut world = RayTracer::new_empty_world("./cubemaps/hd_blue_sunset");
 
     let mat1 = Material::new_lambert_material(color_vec(100, 100, 200), 0.8, 1.0, 0.01, 0.1, 20);
@@ -54,8 +54,15 @@ fn main() -> Result<()> {
         Vector3 {x: 1.0, y: -1.0, z: 1.0}
     );
 
-    let scene = Box::new(scene!(SceneType, Point3{x: 0., y:0., z:0.}, Model(burger), Sphere(sphere), Sphere(sphere2)));
-    world.entities.push(scene);
+    // SLOW WITH ONLY 3 OBJECTS IN THE SCENE
+    // ESPECIALLY WITH MULTITHREADING
+    //entity_enum!(SceneType, Sphere, Model);
+    //let scene = Box::new(scene!(SceneType, Point3{x: 0., y:0., z:0.}, Model(burger), Sphere(sphere), Sphere(sphere2)));
+    //world.entities.push(scene);
+    
+    world.entities.push(Box::new(burger));
+    world.entities.push(Box::new(sphere));
+    world.entities.push(Box::new(sphere2));
 
     raytracer.render("./bruh.png".to_owned(), world);
     Ok(())
