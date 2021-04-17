@@ -9,7 +9,7 @@ pub struct LightRay {
     pub direction: Vector3<f64>,
 }
 
-pub trait LightSource {
+pub trait LightSource: Sync + Send {
     fn illuminate(&self, pos: Point3<f64>, normal: Vector3<f64>) -> LightRay;
     fn visible(&self, pos: Point3<f64>, normal: Vector3<f64>, world: &World) -> bool;
     fn color(&self) -> Vector3<f64>;

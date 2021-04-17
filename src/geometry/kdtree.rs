@@ -1,5 +1,5 @@
 extern crate cgmath;
-use std::{rc::Rc};
+use std::{ops::Deref, sync::{Arc, Mutex}};
 
 use crate::{common::{ColliderResult, Ray}, geometry::aabb::AABB };
 use crate::common::Entity;
@@ -12,7 +12,7 @@ pub struct KDTree <T> {
     left: Option<Box<KDTree<T>>>,
     right: Option<Box<KDTree<T>>>,
     partition: Option<f64>,
-    leaf: Option<Vec<Rc<T>>>,
+    leaf: Option<Vec<Arc<Mutex<T>>>>,
     ropes: RopeType<T>,
     axis: Option<usize>
 }
@@ -41,14 +41,14 @@ impl <T> KDTree<T> {
 }
 
 impl <T: Entity> KDTree<T> {
-    pub fn new(entities: Vec<Rc<T>>) -> Self {
-        let bounding_box = AABB::from_entities(entities.iter().map(|a|a.as_ref()));
+    pub fn new(entities: Vec<Arc<Mutex<T>>>) -> Self {
+        let bounding_box = AABB::from_entities(entities.iter().map(|a|a.deref().lock().unwrap()));
         let mut tree = KDTree::build_tree(entities, 0, bounding_box);
         tree.make_ropes([None, None, None, None, None, None], tree.as_ref());
         *tree
     }
 
-    fn build_tree(mut entities: Vec<Rc<T>>, depth: usize, bounding_box: AABB) -> Box<Self> {
+    fn build_tree(mut entities: Vec<Arc<Mutex<T>>>, depth: usize, bounding_box: AABB) -> Box<Self> {
         let axis = depth % 3;
         if entities.len() < 5 {
             return Box::new(KDTree {
@@ -65,8 +65,9 @@ impl <T: Entity> KDTree<T> {
         let get_max_axis = |a: &T| a.bounding_box().max[axis];
 
         let median_pos = entities.len() / 2;
-        entities.sort_unstable_by(|a, b| get_min_axis(a).partial_cmp(&get_min_axis(b)).unwrap());
-        let mut partition = get_min_axis(&entities[median_pos]);
+        entities.sort_unstable_by(|a, b| get_min_axis(&a.lock().unwrap()).partial_cmp(&get_min_axis(&b.lock().unwrap())).unwrap());
+        let mut partition = get_min_axis(&entities[median_pos].lock().unwrap());
+        
         if partition == bounding_box.min[axis] || partition == bounding_box.max[axis] {
             partition = (bounding_box.min[axis] + bounding_box.max[axis]) / 2.;
         }
@@ -76,13 +77,13 @@ impl <T: Entity> KDTree<T> {
         let right_orig_length = right_half.len();
 
         for ent in &entities {
-            if get_max_axis(&ent) >= partition {
+            if get_max_axis(&ent.lock().unwrap()) >= partition {
                 right_half.push(ent.clone());
             }
         }
 
         for ent in &right_half[..right_orig_length] {
-            if get_min_axis(&ent) < partition {
+            if get_min_axis(&ent.lock().unwrap()) < partition {
                 entities.push(ent.clone());
             }
         }
@@ -132,7 +133,7 @@ impl <T: Entity> KDTree<T> {
             leaf: None
         })
     }
-
+    
     fn make_ropes(&mut self, mut ropes: RopeType<T>, root: *const KDTree<T>) {
         let root = unsafe {&*root};
         if let None = self.leaf {
@@ -196,7 +197,7 @@ impl <T: Entity> KDTree<T> {
                 let mut min_distance = std::f64::MAX;
                 let mut closest: Option<ColliderResult> = None;
                 for entity in node.leaf.as_ref().unwrap() {
-                    collision = entity.collide(ray);
+                    collision = entity.lock().unwrap().collide(ray);
                     if collision.collision {
                         let distance = (collision.position - ray.origin).magnitude2();
                         if distance < min_distance {
