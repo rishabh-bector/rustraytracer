@@ -37,7 +37,7 @@ impl Entity for Triangle {
         let f = 1.0/a;
         let s = ray.origin - self.v0;
         let u = f * s.dot(h);
-        if u < 0.0 || u > 1.0 {
+        if !(0.0..=1.0).contains(&u) {
             return ColliderResult::negative();
         }
         let q = s.cross(edge1);
@@ -54,7 +54,7 @@ impl Entity for Triangle {
                 normal: self.normal,
             }
         }
-        return ColliderResult::negative();
+        ColliderResult::negative()
     }
 
     fn bounding_box(&self) -> AABB {

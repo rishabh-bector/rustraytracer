@@ -28,17 +28,13 @@ impl Material {
         let lambert_behavior = LambertBehavior::new(albedo, lambert, color);
         let ref_be = ReflectionBehavior::new(reflective);
         let phong_behavior = PhongBehavior::new(phong, alpha);
-        let mut shaders: Vec<Arc<dyn RayBehavior>> = Vec::new();
-        shaders.push(Arc::new(lambert_behavior));
-        shaders.push(Arc::new(ref_be));
-        shaders.push(Arc::new(phong_behavior));
+        let shaders: Vec<Arc<dyn RayBehavior>> = vec![Arc::new(lambert_behavior), Arc::new(ref_be), Arc::new(phong_behavior)];
         Material { shaders, color }
     }
 
     pub fn new_sky_material(cubemap_folder: &str) -> Material {
         let cubemap_behavior = CubemapBehavior::new(cubemap_folder, 1.0);
-        let mut shaders: Vec<Arc<dyn RayBehavior>> = Vec::new();
-        shaders.push(Arc::new(cubemap_behavior));
+        let shaders: Vec<Arc<dyn RayBehavior>> = vec![Arc::new(cubemap_behavior)];
         Material {
             shaders,
             color: color_vec(0, 0, 0),

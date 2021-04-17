@@ -53,23 +53,21 @@ impl Entity for AABB {
         let hit_point;
         let inside = self.contains(&ray.origin);
  
-        for i in 0..3 {
+        for (i, dist) in candidate_dist.iter_mut().enumerate() {
             if ray.origin[i] < self.min[i] {
-                candidate_dist[i] = self.min[i] - ray.origin[i];
+                *dist = self.min[i] - ray.origin[i];
                 if ray.direction[i] < 0. { return ColliderResult::negative(); }
             } else if ray.origin[i] > self.max[i] {
-                candidate_dist[i] = self.max[i] - ray.origin[i];
+                *dist = self.max[i] - ray.origin[i];
                 if ray.direction[i] > 0. { return ColliderResult::negative(); }
-            } else {
-                if inside {
-                    if ray.direction[i] > 0. {
-                        candidate_dist[i] = self.max[i] - ray.origin[i];
-                    } else {
-                        candidate_dist[i] = self.min[i] - ray.origin[i];
-                    }
+            } else if inside {
+                if ray.direction[i] > 0. {
+                    *dist = self.max[i] - ray.origin[i];
                 } else {
-                    candidate_dist[i] = -ray.direction[i];
+                    *dist = self.min[i] - ray.origin[i];
                 }
+            } else {
+                *dist = -ray.direction[i];
             }
         }
 
@@ -102,7 +100,7 @@ impl Entity for AABB {
     }
 
     fn bounding_box(&self) -> AABB {
-        return AABB {
+        AABB {
             min: self.min,
             max: self.max
         }

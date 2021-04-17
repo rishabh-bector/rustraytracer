@@ -24,7 +24,7 @@ impl <T> KDTree<T> {
         if !self.aa_bb.contains(&point) { return None }
 
         let mut node = self;
-        while let None = node.leaf {
+        while node.leaf.is_none() {
             let axis = node.axis.unwrap();
             node = if point[axis] >= *node.partition.as_ref().unwrap() { node.right.as_ref().unwrap() }
             else { node.left.as_ref().unwrap() }
@@ -33,7 +33,7 @@ impl <T> KDTree<T> {
     }
 
     pub fn translate_nodes(&self, vec: Vector3<f64>) {
-        if let None = self.leaf {
+        if self.leaf.is_none() {
             let partition_mut = self.partition.as_ref().unwrap() as *const f64 as *mut f64;
             unsafe {*partition_mut += vec[self.axis.unwrap()]};
             self.left.as_ref().unwrap().translate_nodes(vec);
@@ -70,7 +70,7 @@ impl <T: Entity> KDTree<T> {
         entities.sort_unstable_by(|a, b| get_min_axis(&a).partial_cmp(&get_min_axis(&b)).unwrap());
         let mut partition = get_min_axis(&entities[median_pos]);
         
-        if partition == bounding_box.min[axis] || partition == bounding_box.max[axis] {
+        if (partition - bounding_box.min[axis]).abs() < 0.001 || (partition - bounding_box.max[axis]).abs() < 0.001 {
             partition = (bounding_box.min[axis] + bounding_box.max[axis]) / 2.;
         }
 
@@ -139,14 +139,14 @@ impl <T: Entity> KDTree<T> {
     fn make_ropes(&mut self, ropes: RopeType<T>, root: *const KDTree<T>) {
         let root = unsafe {&*root};
         let mut ropes = ropes.0;
-        if let None = self.leaf {
+        if self.leaf.is_none() {
             let axis = self.axis.unwrap();
 
-            for i in 0..6 {
+            for (i, rope) in ropes.iter_mut().enumerate() {
                 let mut node;
-                if let Some(n) = ropes[i] {
-                    node = unsafe {&*n};
-                    while let None = node.leaf {
+                if let Some(n) = rope {
+                    node = unsafe {&**n};
+                    while node.leaf.is_none() {
                         if node.axis.unwrap() == i % 3 {
                             node = if i < 3 { node.right.as_ref().unwrap() }
                             else { node.left.as_ref().unwrap() }
@@ -156,7 +156,7 @@ impl <T: Entity> KDTree<T> {
                             node = node.right.as_ref().unwrap();
                         } else { break }
                     }
-                    ropes[i] = Some(node);
+                    *rope = Some(node);
                 }
             }
 
@@ -172,19 +172,20 @@ impl <T: Entity> KDTree<T> {
             right.make_ropes(RopeType(right_ropes), root);
         } else {
             self.ropes = RopeType(ropes);
-            for i in 0..6 {
-                if let None = ropes[i] {
-                    if i < 3 {
-                        if self.aa_bb.min[i % 3] != root.aa_bb.min[i % 3] {
-                            panic!()
-                        }
-                    } else {
-                        if self.aa_bb.max[i % 3] != root.aa_bb.max[i % 3] {
-                            panic!()
-                        }
-                    }
-                }
-            }
+            // Sanity check
+            // for i in 0..6 {
+            //     if let None = ropes[i] {
+            //         if i < 3 {
+            //             if self.aa_bb.min[i % 3] != root.aa_bb.min[i % 3] {
+            //                 panic!()
+            //             }
+            //         } else {
+            //             if self.aa_bb.max[i % 3] != root.aa_bb.max[i % 3] {
+            //                 panic!()
+            //             }
+            //         }
+            //     }
+            // }
         }
     }
 
@@ -234,10 +235,10 @@ impl <T: Entity> KDTree<T> {
 }
 
 fn get_plane(point: Point3<f64>, aa_bb: AABB) -> u8 {
-    return if point.x < aa_bb.min.x { 0 }
-            else if point.y < aa_bb.min.y { 1 }
-            else if point.z < aa_bb.min.z { 2 }
-            else if point.x > aa_bb.max.x { 3 }
-            else if point.y > aa_bb.max.y { 4 }
-            else { 5 };
+    if point.x < aa_bb.min.x { 0 }
+        else if point.y < aa_bb.min.y { 1 }
+        else if point.z < aa_bb.min.z { 2 }
+        else if point.x > aa_bb.max.x { 3 }
+        else if point.y > aa_bb.max.y { 4 }
+        else { 5 }
 }

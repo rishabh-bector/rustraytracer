@@ -14,10 +14,9 @@ use tracer::*;
 use material::*;
 use geometry::{model::{Model}, sphere::Sphere, aabb::AABB, scene::Scene};
 
-use anyhow::Result;
 use cgmath::{Vector3, Point3};
 
-fn main() -> Result<()> {
+fn main() {
     println!("MAIN!");
 
     let raytracer = RayTracer::new_default_renderer((3840, 2160));
@@ -43,7 +42,7 @@ fn main() -> Result<()> {
             z: 8.0,
         },
         1.0,
-        mat2.clone(),
+        mat2,
     );
 
     let burger = Model::new(
@@ -64,7 +63,6 @@ fn main() -> Result<()> {
     world.entities.push(Box::new(sphere2));
 
     raytracer.render("./bruh.png".to_owned(), world);
-    Ok(())
 }
 
 // Todo:

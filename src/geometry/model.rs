@@ -45,7 +45,7 @@ impl Model {
         }
         println!("Model has {} triangles.", triangles.len());
         println!("Building k-d tree with model's triangles...");
-        let triangles: Vec<Arc<Triangle>> = triangles.into_iter().map(|a| Arc::new(a)).collect();
+        let triangles: Vec<Arc<Triangle>> = triangles.into_iter().map(Arc::new).collect();
         Model {
             material,
             aa_bb: AABB::from_entities(triangles.iter().map(|a|a.as_ref())),
@@ -66,7 +66,7 @@ impl Entity for Model {
     }
 
     fn bounding_box(&self) -> AABB {
-        self.aa_bb.clone()
+        self.aa_bb
     }
 
     fn position(&self) -> Point3<f64> {

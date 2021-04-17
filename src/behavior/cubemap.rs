@@ -46,7 +46,7 @@ impl CubemapBehavior {
         std::io::stdout().flush().unwrap();
         let maps: [image::ImageBuffer<image::Rgb<u8>, std::vec::Vec<u8>>; 6] =
             [left, right, down, up, front, back];
-        print!(".\n");
+        println!(".");
         std::io::stdout().flush().unwrap();
         CubemapBehavior { maps, mix }
     }
@@ -94,7 +94,7 @@ fn cubemap(x: f64, y: f64, z: f64) -> (u32, f64, f64) {
     let mut uc = 0 as f64;
     let mut vc = 0 as f64;
 
-    let mut index = 0 as u32;
+    let mut index = 0_u32;
 
     // POSITIVE X
     if is_x_positive && abs_x >= abs_y && abs_x >= abs_z {

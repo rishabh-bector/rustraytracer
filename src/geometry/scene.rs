@@ -38,7 +38,7 @@ pub struct Scene<T: Entity> {
 
 impl <T: Entity> Scene<T> {
     pub fn new(models: Vec<T>, position: Point3<f64>) -> Self {
-        let models: Vec<Arc<T>> = models.into_iter().map(|a| Arc::new(a)).collect();
+        let models: Vec<Arc<T>> = models.into_iter().map(Arc::new).collect();
         Scene {
             aa_bb: AABB::from_entities(models.iter().map(|a|a.as_ref())),
             tree: KDTree::new(models.clone()),
@@ -58,7 +58,7 @@ impl <T: Entity> Entity for Scene<T> {
     }
 
     fn bounding_box(&self) -> AABB {
-        self.aa_bb.clone()
+        self.aa_bb
     }
 
     fn position(&self) -> Point3<f64> {

@@ -114,7 +114,7 @@ impl RayTracer {
         let arc_world = Arc::new(world);
         let arc_self = Arc::new(self);
 
-        let num_threads = 12 as usize;
+        let num_threads = 12_usize;
         let mut rays: Vec<Vec<_>> = (0..num_threads).into_iter().map(|_|Vec::new()).collect();
         let mut threads = Vec::new();
 
@@ -195,7 +195,7 @@ impl RayTracer {
             for behavior in material.shaders.iter() {
                 match behavior.as_ref().compute(ray, world, &result, self) {
                     Some(color) => {
-                        final_color = final_color + color * behavior.mix();
+                        final_color += color * behavior.mix();
                     }
                     None => continue,
                 }
