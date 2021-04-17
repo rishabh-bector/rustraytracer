@@ -26,7 +26,7 @@ impl Ray {
     }
 }
 
-pub trait RayBehavior: Sync + Send {
+pub trait RayBehavior {
     fn compute(
         &self,
         ray: &Ray,
@@ -38,7 +38,7 @@ pub trait RayBehavior: Sync + Send {
     fn mix(&self) -> f64;
 }
 
-pub trait Entity: Sync + Send {
+pub trait Entity {
     fn collide(&self, ray: &Ray) -> ColliderResult;
     fn material(&self) -> Option<&Material>;
     fn bounding_box(&self) -> AABB;

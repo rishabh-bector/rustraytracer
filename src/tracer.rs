@@ -5,8 +5,7 @@ use crate::material::*;
 use crate::lighting::*;
 
 use cgmath::{Vector3, Point3, InnerSpace};
-use image::{ImageBuffer, Rgb};
-use std::{sync::Arc, thread, time};
+use std::time;
 
 pub struct RayTracer {
     settings: RenderSettings,
@@ -24,17 +23,6 @@ pub struct Camera {
 }
 
 impl RayTracer {
-    pub const fn default() -> Self {
-        RayTracer {
-            settings: RenderSettings {image_size: (0, 0)},
-            camera: Camera {
-                size: (0., 0.),
-                lens_factor: (0., 0.),
-                position: Point3 {x: 0., y: 0., z: 0.}
-            }
-        }
-    }
-
     pub fn new_default_renderer(size: (u32, u32)) -> RayTracer {
         RayTracer {
             settings: RenderSettings { image_size: size },
@@ -74,11 +62,11 @@ impl RayTracer {
         }
     }
 
-    pub fn render(self, output: String, world: World) {
+    pub fn render(&self, output: String, world: World) {
         println!("Rendering...");
         let timer = time::Instant::now();
 
-        let mut img: ImageBuffer<image::Rgb<u8>, Vec<_>> = 
+        let mut img =
             image::ImageBuffer::new(self.settings.image_size.0, self.settings.image_size.1);
 
         let lense_pos = self.camera.position
@@ -110,20 +98,11 @@ impl RayTracer {
         };
         
         let num_pixels = img.enumerate_pixels().len() as i32;
+        let tenth = num_pixels / 10;
+        let mut i = 0;
 
-        let arc_world = Arc::new(world);
-        let arc_self = Arc::new(self);
-
-        let num_threads = 12 as usize;
-        let mut rays: Vec<Vec<_>> = (0..num_threads).into_iter().map(|_|Vec::new()).collect();
-        let mut threads = Vec::new();
-
-        let chunk_size = num_pixels as usize / num_threads;
-
-        for (i, (x, y, p)) in img.enumerate_pixels_mut().into_iter().enumerate() {
-            let thread_index = i / chunk_size;
-
-            let camera_point = arc_self.camera.position;
+        for (x, y, p) in img.enumerate_pixels_mut() {
+            let camera_point = self.camera.position;
 
             let lense_point = lense_ll
                 + (x as f64 / self.settings.image_size.0 as f64) * lense_h
@@ -139,29 +118,16 @@ impl RayTracer {
                 bounce: 0,
             };
 
-            let arc_world = arc_world.clone();
-            let arc_self = arc_self.clone();
+            *p = vec_rgb(self.cast(&ray, &world));
 
-            struct Bad(*mut Rgb<u8>);
-            unsafe impl Send for Bad {}
-            let p = Bad(p);
+            // if x == 0 && y == 0 {
+            //     println!("{:?}", ray.direction);
+            // }
 
-            rays[thread_index].push(
-                move || unsafe {*p.0 = vec_rgb(arc_self.cast(&ray, &arc_world))}
-            );
-        }
-
-        for ray in rays {
-            threads.push(thread::spawn(
-                move || ray.into_iter().for_each(|a| {a();})
-            ));
-        }
-
-        let mut i = 0f32;
-        for thread in threads {
-            thread.join().unwrap();
-            println!("Progress: {}%", i * 100.0);
-            i += 1. / num_threads as f32;
+            if i % tenth == 0 {
+                println!("Progress: {}%", (i as f64) / (num_pixels as f64) * 100.0);
+            }
+            i += 1;
         }
 
         match img.save(output) {
